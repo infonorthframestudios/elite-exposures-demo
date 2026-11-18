@@ -365,7 +365,11 @@ const GENERIC_SET = {
     ["A day trip out", "A scenic excursion beyond the city — nature, heritage or coastline, whichever shines brightest near " + d.name + "."],
     ["Your kind of day", { "Sightseeing": "Deeper sightseeing — museums, viewpoints and hidden corners most visitors miss.", "Food & local life": "A food lover's day — markets, street food and a local cooking experience.", "Adventure": "An adventure day — outdoor thrills arranged with trusted local operators.", "Shopping": "A shopping day — malls, markets and the best local buys, with bargaining tips from us." }[a.interest] || "A day shaped around your interests, arranged by Bhavna."]
   ],
-  fillers: [["Free exploration day", "No fixed plan — wander with our handpicked local tips in your pocket."]],
+  fillers: [
+    ["Free exploration day", "No fixed plan — wander with our handpicked local tips in your pocket."],
+    ["Second-look day", "Revisit your favourite spot from the trip, slower this time — or let Bhavna add the sight you skipped."],
+    ["Local life day", "Markets, neighbourhood cafés and everyday local corners beyond the tourist trail."]
+  ],
   last: ["Souvenirs & departure", "Last-minute buys and a relaxed meal before your transfer out."]
 };
 
@@ -410,7 +414,11 @@ const PLAN_SETS = {
     },
     fillers: [
       ["Reef day, round two", "A different snorkel or dive site — or try a night snorkel and see the reef wake up after dark."],
-      ["Pure leisure day", "No fixed plan — lagoon, pool and beach entirely at your pace, spa if you feel like it."]
+      ["Sunset fishing & beach barbecue", "Traditional hand-line fishing at golden hour, then your catch grilled on the beach for dinner."],
+      ["Spa & wellness day", "A slow morning, a long spa ritual, yoga on the deck — the Maldives at its calmest."],
+      ["Diving discovery day", "A beginner-friendly discover-scuba session, or guided fun dives on a coral thila for certified divers."],
+      ["Lagoon picnic day", "A boat out to an empty sandbank with a picnic hamper, shade and nothing on the agenda but swimming."],
+      ["Pure leisure day", "No fixed plan — lagoon, pool and beach entirely at your pace, exactly as a long Maldives stay should feel."]
     ],
     last: ["Last lagoon morning", "A slow breakfast and one final swim, then your transfer back to Malé in time for your flight. (Seaplane guests leave earlier in the day — Bhavna times everything for you.)"]
   },
@@ -426,7 +434,11 @@ const PLAN_SETS = {
       ["Beach day", "Surf, beach clubs or pure downtime on the sand — paced exactly how you like it."],
       ["Nusa Penida day trip", "A boat day to the island's famous cliffs and crystal bays, including the Kelingking viewpoint."]
     ],
-    fillers: [["Explore at your pace", "Cafés, markets and hidden beaches — a free day with our local tips in your pocket."]],
+    fillers: [
+      ["Explore at your pace", "Cafés, markets and hidden beaches — a free day with our local tips in your pocket."],
+      ["Mount Batur sunrise (optional)", "An early trek or jeep ride for sunrise over the caldera — or sleep in and take a slow spa morning instead."],
+      ["South Bali day", "Uluwatu temple on the cliffs, Padang Padang beach and a seafood dinner on the sand at Jimbaran."]
+    ],
     last: ["Souvenirs & departure", "Last-minute shopping and a relaxing massage before your transfer to the airport."]
   },
   dubai: {
@@ -441,7 +453,11 @@ const PLAN_SETS = {
       ["Old Dubai", "Gold and spice souks, an abra boat ride across the Creek and the Al Fahidi heritage quarter."],
       ["Palm & beach day", "Palm Jumeirah and Atlantis, then a relaxed afternoon on the beach."]
     ],
-    fillers: [["Your choice day", "An Abu Dhabi day trip, a theme park, or pure shopping — we will line it up for you."]],
+    fillers: [
+      ["Your choice day", "An Abu Dhabi day trip, a theme park, or pure shopping — we will line it up for you."],
+      ["Water & thrill day", "Aquaventure or IMG Worlds, or a yacht afternoon around the Marina and the Palm."],
+      ["Culture & cuisine day", "Alserkal Avenue galleries, a food tour through Deira's eateries and a sunset abra ride."]
+    ],
     last: ["Last looks & departure", "A final mall run or a slow brunch, then your transfer to the airport."]
   },
   seychelles: {
@@ -456,7 +472,11 @@ const PLAN_SETS = {
       ["La Digue slow day", "Bicycles, giant tortoises and the picture-perfect boulders of Anse Source d'Argent."],
       ["Reef day", "Snorkelling or a glass-bottom boat over coral gardens full of tropical fish."]
     ],
-    fillers: [["Barefoot leisure day", "No plan at all — just you, the sand and the sea."]],
+    fillers: [
+      ["Barefoot leisure day", "No plan at all — just you, the sand and the sea."],
+      ["Victoria & gardens day", "The tiny capital Victoria, its clock tower and market, then the botanical gardens and a viewpoint drive."],
+      ["Marine park day", "A boat day in Ste Anne Marine Park — giant tortoises, reefs and a Creole barbecue on Moyenne Island."]
+    ],
     last: ["Last swim & departure", "A final dip and a fresh seafood lunch before your transfer to the airport."]
   },
   mauritius: {
@@ -471,7 +491,11 @@ const PLAN_SETS = {
       ["Port Louis & gardens", "The capital's markets and waterfront, then the famous Pamplemousses botanical gardens."],
       ["Sea adventures", "Swim with dolphins, try parasailing, or walk under the sea — your pick."]
     ],
-    fillers: [["Resort leisure day", "Beach, pool and spa — a day with nothing on the clock."]],
+    fillers: [
+      ["Resort leisure day", "Beach, pool and spa — a day with nothing on the clock."],
+      ["Wild west day", "Casela Nature Parks — safari, ziplines and walking with lions experiences for the adventurous."],
+      ["Tea & rum route day", "The Bois Chéri tea fields, a rum distillery tasting and colonial mansions in the green south."]
+    ],
     last: ["Last lagoon morning", "A slow breakfast and a final swim before your airport transfer."]
   }
 };
@@ -529,10 +553,11 @@ function openPlan(destId, preset = {}) {
   if (preset.durLabel) planState.answers.days = preset.durLabel;
   document.getElementById("planStep1").hidden = false;
   document.getElementById("planStep2").hidden = true;
+  document.getElementById("planFooter").hidden = true;
   renderPlanQuestions();
   planOverlay.hidden = false;
   document.body.style.overflow = "hidden";
-  planOverlay.querySelector(".overlay-panel").scrollTop = 0;
+  planOverlay.querySelector(".overlay-body").scrollTop = 0;
 }
 function closePlan() { planOverlay.hidden = true; document.body.style.overflow = ""; }
 document.getElementById("planClose").addEventListener("click", closePlan);
@@ -540,8 +565,10 @@ planOverlay.addEventListener("click", e => { if (e.target === planOverlay) close
 document.addEventListener("keydown", e => { if (e.key === "Escape") closePlan(); });
 document.getElementById("planBack").addEventListener("click", () => {
   document.getElementById("planStep2").hidden = true;
+  document.getElementById("planFooter").hidden = true;
   document.getElementById("planStep1").hidden = false;
 });
+document.getElementById("planCloseBtn").addEventListener("click", closePlan);
 
 function composeDays(set, d, a, n) {
   const core = set.core(a, d);
@@ -577,7 +604,8 @@ document.getElementById("planGo").addEventListener("click", () => {
     encodeURIComponent("Hi Bhavna! I sketched a trip with your planner:\n" + planSummary + "\n\nMy sample plan:\n" + planDayLines + "\n\nPlease customise this for me.");
   document.getElementById("planStep1").hidden = true;
   document.getElementById("planStep2").hidden = false;
-  planOverlay.querySelector(".overlay-panel").scrollTop = 0;
+  document.getElementById("planFooter").hidden = false;
+  planOverlay.querySelector(".overlay-body").scrollTop = 0;
 });
 document.getElementById("planContact").addEventListener("click", () => {
   const d = DESTINATIONS.find(x => x.id === planState.destId);
