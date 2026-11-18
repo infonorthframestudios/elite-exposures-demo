@@ -112,7 +112,7 @@ header.scrolled{box-shadow:0 10px 30px rgba(13,43,69,.1)}
 .cf-card.center{opacity:1;transform:scale(1)}
 .cf-card img{width:100%;height:100%;object-fit:cover}
 .cf-card-grad{width:100%;height:100%;display:grid;place-items:center;background:linear-gradient(150deg,var(--blue) 0%,var(--blue-deep) 55%,var(--navy) 130%)}
-.cf-card-grad span{font-family:'Montez',cursive;font-size:3rem;color:#fff;transform:rotate(-6deg)}
+.cf-card-grad span{font-family:'Montez',cursive;font-size:3rem;color:#fff}
 .cf-card-shade{position:absolute;inset:0;background:linear-gradient(180deg,transparent 52%,rgba(8,31,51,.85))}
 .cf-card-name{position:absolute;bottom:18px;left:0;right:0;text-align:center;color:#fff;font-weight:800;font-size:1.25rem}
 .cf-card-tag{position:absolute;bottom:48px;left:0;right:0;text-align:center;color:#bfe6f7;font-size:.78rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}

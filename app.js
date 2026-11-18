@@ -395,7 +395,7 @@ document.querySelectorAll(".dotb").forEach(d => d.addEventListener("click", () =
       const r = d.parentElement.getBoundingClientRect();
       if (r.bottom < -100 || r.top > vh + 100) return;
       const delta = (r.top + r.height / 2 - vh / 2) * parseFloat(d.dataset.speed || 0.05);
-      d.style.transform = `translate3d(0, ${delta.toFixed(1)}px, 0) rotate(-4deg)`;
+      d.style.transform = `translate3d(0, ${delta.toFixed(1)}px, 0)`;
     });
     // Section photos: gentle ±10px drift based on scroll progress through viewport
     plxImgs.forEach(img => {
