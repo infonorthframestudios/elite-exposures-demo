@@ -91,6 +91,10 @@
           <option>8–12 days</option><option>2 weeks +</option>
         </select>
       </div>
+      <div class="hs-field">
+        <label for="hsDate">Travel date</label>
+        <input type="date" id="hsDate">
+      </div>
       <button class="btn btn-blue btn-search" type="submit">🔍 Start Planning</button>
     </form>
   </div>
@@ -431,8 +435,40 @@
       </ul>
       <p class="overlay-price-note">Price on enquiry — Bhavna quotes personally, after understanding your trip. No two trips are priced alike.</p>
       <div class="overlay-actions">
-        <button class="btn btn-blue btn-lg" id="ovEnquire">Enquire for this trip</button>
+        <button class="btn btn-blue btn-lg" id="ovPlan">Plan this trip →</button>
+        <button class="btn btn-outline btn-lg" id="ovEnquire">Enquire for this trip</button>
         <a class="btn btn-whatsapp btn-lg" id="ovWhats" href="#" target="_blank" rel="noopener">WhatsApp</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PLAN POPUP — interactive trip planner (sample plan; Bhavna customises; price on enquiry) -->
+<div class="overlay" id="planOverlay" hidden role="dialog" aria-modal="true" aria-labelledby="planTitle">
+  <div class="overlay-panel plan-panel">
+    <div class="overlay-head plan-head">
+      <div>
+        <p class="script-accent light">Plan in under a minute</p>
+        <h3 id="planTitle">Your trip plan</h3>
+      </div>
+      <button class="ov-close" id="planClose" aria-label="Close planner">✕</button>
+    </div>
+    <div class="overlay-body">
+      <div id="planStep1">
+        <p class="plan-intro">A few quick taps — no typing. We will sketch a sample plan from your answers.</p>
+        <div id="planQuestions"></div>
+        <button class="btn btn-blue btn-lg plan-go" id="planGo" disabled>Show my sample plan →</button>
+      </div>
+      <div id="planStep2" hidden>
+        <p class="plan-meta" id="planMeta"></p>
+        <p class="plan-picks" id="planPicks" hidden></p>
+        <ol class="ov-days" id="planDays"></ol>
+        <p class="plan-note">This is a <strong>sample plan</strong> to get you started — Bhavna will customise every detail personally around your dates, pace and budget. <strong>Price on enquiry.</strong></p>
+        <div class="overlay-actions">
+          <button class="btn btn-blue btn-lg" id="planContact">Contact →</button>
+          <a class="btn btn-whatsapp btn-lg" id="planWhats" href="#" target="_blank" rel="noopener">Message on WhatsApp</a>
+          <button class="btn btn-outline btn-lg" id="planBack">← Change answers</button>
+        </div>
       </div>
     </div>
   </div>
