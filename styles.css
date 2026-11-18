@@ -59,7 +59,7 @@ header.scrolled{box-shadow:0 10px 30px rgba(13,43,69,.1)}
 
 /* Plan popup — Maldives-washed, script headings, centred, sticky action footer */
 .overlay.overlay-center{align-items:center;padding:1rem}
-.plan-panel{width:min(620px,100%);border-radius:28px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;text-align:center;
+.overlay-panel.plan-panel{width:min(620px,100%);border-radius:28px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;text-align:center;
   background:linear-gradient(rgba(255,255,255,.8),rgba(255,255,255,.88)),url("https://images.unsplash.com/photo-1595184979141-090792f6b578?auto=format&fit=crop&w=1000") center/cover no-repeat #fff}
 .plan-panel .overlay-body{overflow-y:auto;flex:1;min-height:0;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;
   background:linear-gradient(rgba(255,255,255,.76),rgba(255,255,255,.85)),url("https://images.unsplash.com/photo-1514282401047-d79a71a590e8?auto=format&fit=crop&w=1000") center/cover;
