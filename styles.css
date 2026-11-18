@@ -90,9 +90,8 @@ header.scrolled{box-shadow:0 10px 30px rgba(13,43,69,.1)}
 .cat-row{display:flex;gap:1.6rem;justify-content:center;flex-wrap:wrap;padding:1rem .5rem}
 .cat-card{width:200px;cursor:pointer;text-align:center;transition:.3s}
 .cat-card img{width:200px;height:250px;object-fit:cover;border-radius:20px;box-shadow:0 14px 30px rgba(13,43,69,.18)}
-.cat-card.tilt-l{transform:rotate(-4deg)}
-.cat-card.tilt-r{transform:rotate(3.5deg)}
-.cat-card:hover{transform:rotate(0) translateY(-8px) scale(1.02)}
+.cat-card.tilt-l,.cat-card.tilt-r{transform:none}
+.cat-card:hover{transform:translateY(-8px) scale(1.02)}
 .cat-card h3{margin-top:1rem;font-size:1.08rem;font-weight:800;color:var(--navy)}
 .cat-link{color:var(--blue-dark);font-weight:700;font-size:.85rem}
 .cat-note{text-align:center;color:var(--muted);max-width:620px;margin:1.6rem auto 0;font-size:.94rem}
