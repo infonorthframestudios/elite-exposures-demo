@@ -58,8 +58,9 @@ header.scrolled{box-shadow:0 10px 30px rgba(13,43,69,.1)}
 .hs-field input{border:0;background:transparent;font:inherit;font-weight:600;color:var(--muted);font-size:.93rem;padding:.2rem 0;outline:none;width:100%}
 
 /* Plan popup — Maldives-washed, script headings, centred, sticky action footer */
-.plan-panel{width:min(620px,100%);display:flex;flex-direction:column;overflow:hidden;text-align:center;
-  background:linear-gradient(rgba(255,255,255,.9),rgba(255,255,255,.95)),url("https://images.unsplash.com/photo-1595184979141-090792f6b578?auto=format&fit=crop&w=1000") center/cover no-repeat #fff}
+.overlay.overlay-center{align-items:center;padding:1rem}
+.plan-panel{width:min(620px,100%);border-radius:28px;max-height:94vh;display:flex;flex-direction:column;overflow:hidden;text-align:center;
+  background:linear-gradient(rgba(255,255,255,.8),rgba(255,255,255,.88)),url("https://images.unsplash.com/photo-1595184979141-090792f6b578?auto=format&fit=crop&w=1000") center/cover no-repeat #fff}
 .plan-panel .overlay-body{overflow-y:auto;flex:1;scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
 .plan-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex:none;padding:1.15rem 1.4rem;border-radius:28px 28px 0 0;
   background:linear-gradient(rgba(8,47,84,.42),rgba(8,47,84,.58)),url("https://images.unsplash.com/photo-1595184979141-090792f6b578?auto=format&fit=crop&w=1000") center/cover}
@@ -77,7 +78,7 @@ header.scrolled{box-shadow:0 10px 30px rgba(13,43,69,.1)}
 .plan-meta{font-weight:700;color:var(--blue-dark);background:rgba(230,246,253,.9);border-radius:12px;padding:.7rem 1rem;margin-bottom:1rem}
 .plan-picks{color:var(--navy);background:rgba(255,247,232,.94);border:1px solid #f0dcae;border-radius:12px;padding:.7rem 1rem;margin:-.4rem 0 1rem;font-size:.94rem}
 .plan-note{color:var(--muted);margin:1rem 0 1.2rem;font-size:.95rem}
-.plan-panel .ov-days li{flex-direction:column;align-items:center;text-align:center;gap:.35rem;background:rgba(255,255,255,.88)}
+.plan-panel .ov-days li{flex-direction:column;align-items:center;text-align:center;gap:.35rem;background:rgba(255,255,255,.82)}
 .plan-panel .ov-days li strong{font-family:'Montez',cursive;font-weight:400;font-size:1.45rem;color:var(--blue-dark);line-height:1.1}
 .plan-footer{flex:none;display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;padding:.85rem 1rem;border-top:1px solid var(--line);background:rgba(255,255,255,.96)}
 .plan-footer[hidden]{display:none}
