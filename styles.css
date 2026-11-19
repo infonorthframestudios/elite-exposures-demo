@@ -513,3 +513,14 @@ section[id]{scroll-margin-top:92px}
 @media(min-width:761px) and (max-width:1020px){
   .main-nav{padding-bottom:1.5rem}
 }
+
+/* Mobile dropdown immunity (Rashmi's real-phone find): the desktop open-state
+   rule (.has-drop.open .mega, specificity 0-3-0) was beating the mobile
+   transform:none (0-1-0), shifting the expanded list -50% off the left edge.
+   These higher-specificity resets make the mobile expansions plain stacked
+   lists in the menu flow — no desktop panel geometry can leak in. */
+@media(max-width:1020px){
+  .main-nav .mega,.main-nav .drop{position:static;left:auto;top:auto;transform:none;width:100%;max-width:none;min-width:0;grid-template-columns:none;box-shadow:none;border-radius:0;z-index:auto}
+  .main-nav .has-drop.open .mega,.main-nav .has-drop.open .drop{transform:none}
+  .main-nav .mega::before,.main-nav .drop::before{display:none}
+}
