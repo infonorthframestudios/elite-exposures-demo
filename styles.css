@@ -482,3 +482,17 @@ section[id]{scroll-margin-top:92px}
   .mega-col{margin-bottom:1rem}
   .mega-col:last-child{margin-bottom:0}
 }
+
+/* Tablet / in-between band (Rashmi's Brave desktop-mode ~980px; tablets 768-1024):
+   two-column sections collapse and the hero search bar wraps BEFORE they can crush */
+@media(max-width:1020px){
+  .plan-wrap,.enquire-wrap,.founder-card{grid-template-columns:1fr}
+  .plan-collage{min-height:380px}
+  .searchbar{flex-wrap:wrap}
+  .hs-field{flex:1 1 42%}
+  .btn-search{flex:1 1 100%;padding:1rem}
+}
+@media(min-width:1021px) and (max-width:1180px){
+  header{gap:.8rem}
+  .main-nav{gap:1rem}
+}
