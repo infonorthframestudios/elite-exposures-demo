@@ -497,6 +497,31 @@ document.addEventListener("click", e => {
     document.querySelectorAll(".has-drop.open").forEach(x => x.classList.remove("open"));
   }
 });
+// Desktop hover intent: the mega-panel is centred on the page while its
+// button sits left of centre, so a diagonal pointer move toward the far
+// columns can briefly leave both button and panel and drop the hover.
+// Latch the menu open on mouseenter (fine pointers only) and give it a
+// short grace period before closing, so the dropdown never traps a click.
+if (matchMedia("(hover: hover) and (pointer: fine)").matches) {
+  document.querySelectorAll(".has-drop").forEach(item => {
+    let t = null;
+    item.addEventListener("mouseenter", () => {
+      if (!matchMedia("(min-width: 1021px)").matches) return;
+      clearTimeout(t);
+      item.classList.add("open");
+      item.dataset.hoverOpen = "1";
+      item.querySelector(".drop-btn").setAttribute("aria-expanded", "true");
+    });
+    item.addEventListener("mouseleave", () => {
+      if (!item.dataset.hoverOpen) return;
+      t = setTimeout(() => {
+        item.classList.remove("open");
+        delete item.dataset.hoverOpen;
+        item.querySelector(".drop-btn").setAttribute("aria-expanded", "false");
+      }, 400);
+    });
+  });
+}
 // Destinations dropdown: places with content open their destination view
 document.querySelectorAll("[data-dest-id]").forEach(a => a.addEventListener("click", e => {
   e.preventDefault();

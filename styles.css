@@ -496,3 +496,6 @@ section[id]{scroll-margin-top:92px}
   header{gap:.8rem}
   .main-nav{gap:1rem}
 }
+
+/* Micro-batch (prepared, not yet published): keep Plan/Enquire labels + arrows on one line */
+.pop-foot>span:last-child>*{white-space:nowrap;padding-left:.55rem;padding-right:.55rem;font-size:.82rem}
