@@ -38,8 +38,8 @@ header.scrolled{box-shadow:0 10px 30px rgba(13,43,69,.1)}
 .brand{flex:none;line-height:0}
 .brand-logo{object-fit:contain}
 .main-nav{display:flex;gap:1.6rem;margin-left:auto}
-.main-nav a{text-decoration:none;font-weight:700;font-size:.93rem;color:var(--navy)}
-.main-nav a:hover{color:var(--blue)}
+.main-nav a{text-decoration:none;font-weight:600;font-size:.92rem;color:var(--navy)}
+.main-nav a:hover{color:var(--blue-dark)}
 .header-cta{margin-left:1rem}
 .nav-toggle{display:none;background:none;border:0;font-size:1.5rem;color:var(--navy);cursor:pointer;margin-left:auto}
 
@@ -466,4 +466,19 @@ section[id]{scroll-margin-top:92px}
 @media(max-width:760px){
   .wa-float{display:none}
   footer{padding-bottom:8.5rem}
+}
+
+/* Fix round 3 (prepared, awaiting Dave's publish go): popular-card footer stacks so buttons never clip */
+.pop-foot{flex-direction:column;align-items:stretch;gap:.55rem}
+.pop-foot>span:last-child{display:flex;gap:.45rem}
+.pop-foot>span:last-child>*{flex:1;text-align:center}
+
+/* Final fix-round block (Rashmi's phone test): one-flow scrolling mobile menu + bulletproof toggle font */
+.drop-btn{font-family:inherit}
+@media(max-width:1020px){
+  .main-nav{padding:1rem 1.2rem 4rem;max-height:calc(100vh - 120px);max-height:calc(100dvh - 120px);overscroll-behavior:contain}
+  .main-nav .nav-item{min-height:0;flex:none}
+  .has-drop.open .mega{display:block;animation:dropIn .25s ease}
+  .mega-col{margin-bottom:1rem}
+  .mega-col:last-child{margin-bottom:0}
 }

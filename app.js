@@ -502,7 +502,7 @@ document.querySelectorAll("[data-dest-id]").forEach(a => a.addEventListener("cli
   e.preventDefault();
   closeNavAndDrops();
   const d = DESTINATIONS.find(x => x.id === a.dataset.destId);
-  if (d) openDest(d);
+  if (d) openDest(d.id);
 }));
 // Destinations dropdown: new countries pre-pick the enquiry form (no lead lost)
 document.querySelectorAll("[data-dest-name]").forEach(a => a.addEventListener("click", () => {
@@ -520,7 +520,7 @@ document.querySelectorAll("[data-dest-name]").forEach(a => a.addEventListener("c
     </article>`).join("");
   grid.querySelectorAll("[data-story]").forEach(c => c.addEventListener("click", () => {
     const d = DESTINATIONS.find(x => x.id === c.dataset.story);
-    if (d) openDest(d);
+    if (d) openDest(d.id);
   }));
 })();
 // Admin login (demo placeholder — Phase 2 toolkit)
