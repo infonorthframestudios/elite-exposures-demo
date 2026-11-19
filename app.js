@@ -1,4 +1,4 @@
-// Elite Exposures — concept demo. Content adapted from eliteexposures.in (cleaned).
+// Elite Exposures Travel — concept demo. Content adapted from eliteexposures.in (cleaned).
 // Sample day plans are illustrative rhythms only; real itineraries are built per enquiry.
 const U = (id, w) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w || 1000}`;
 const Z = (path, w) => `https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=${w || 1000},fit=crop/A85655oqJ9uZbX4k/${path}`;
@@ -170,7 +170,7 @@ const DESTINATIONS = [
     id: "taiwan", name: "Taiwan", tag: "Featured Journey",
     img: null, feature: true,
     card: "Discover the best places to visit in Taiwan with our itinerary.",
-    intro: "Plan your travel with Elite Exposures to Taiwan — discover the best places to visit with our itinerary, immerse yourself in rich culture and heritage, and embark on adventures to hidden gems.",
+    intro: "Plan your travel with Elite Exposures Travel to Taiwan — discover the best places to visit with our itinerary, immerse yourself in rich culture and heritage, and embark on adventures to hidden gems.",
     highlights: [
       ["Explore Taiwan", "Discover the best places to visit in Taiwan with our itinerary."],
       ["Spot the Dragon's Head", "Spot the dragon's head among the rocks in Yehliu's second section."],
@@ -343,174 +343,106 @@ document.getElementById("ovEnquire").addEventListener("click", () => {
   document.getElementById("enquire").scrollIntoView({ behavior: "smooth" });
 });
 
-// ---------- Interactive Plan Popup ----------
-// Flow: pick destination/duration/date in the hero bar (or tap Plan on a card)
-// -> answer 3-4 chip questions -> see a SAMPLE day-wise plan (no prices, ever)
-// -> Contact (prefills the enquiry form) or WhatsApp (plan pre-written).
+// ---------- Interactive Plan Popup — DYNAMIC (Maldives pilot) ----------
+// Behaviour (per Bhavna's correction batch #3): nothing here is a fixed template.
+// The client picks an island area -> the resort list rebuilds live from the
+// researched per-area dataset below (airport, transfer, resorts, activities,
+// inclusions) -> the day-wise itinerary is COMPOSED from the exact selections:
+// Day 1 flies them into that area's airport and transfers them to the resort
+// they picked; the following days weave in that resort's own activities and
+// inclusions (breakfast etc.) plus the area's excursions. Static demo data,
+// researched Nov 2026 — Bhavna confirms every detail live before booking.
 const planOverlay = document.getElementById("planOverlay");
 let planState = null;
+function destIdByName(name) { const d = DESTINATIONS.find(x => x.name === name); return d ? d.id : null; }
 const DAYS_GROUP = { key: "days", label: "How many days?", options: ["3–4 days", "5–7 days", "8–12 days", "2 weeks +"] };
 const DAYS_MAP = { "3–4 days": 4, "5–7 days": 6, "8–12 days": 10, "2 weeks +": 12 };
-const shortOpt = s => s.split(" — ")[0];
+const MV_STYLES = ["Luxury", "Premium", "Family-friendly", "Budget — local island guesthouse"];
 
-const GENERIC_SET = {
-  questions: [
-    { key: "base", label: "Where do you like to base yourself?", options: ["City centre", "Near the beach / coast", "Quiet outskirts", "No preference"] },
-    { key: "pace", label: "Your travel pace?", options: ["Relaxed", "Balanced", "See as much as possible"] },
-    { key: "interest", label: "Most exciting for you?", options: ["Sightseeing", "Food & local life", "Adventure", "Shopping"] }
-  ],
-  core: (a, d) => [
-    ["Arrive in " + d.name, "Settle into your stay and take an easy evening walk, ending with a local dinner."],
-    [d.name + " highlights", "A guided day through the must-see sights, with the stories and local secrets behind them."],
-    ["A day trip out", "A scenic excursion beyond the city — nature, heritage or coastline, whichever shines brightest near " + d.name + "."],
-    ["Your kind of day", { "Sightseeing": "Deeper sightseeing — museums, viewpoints and hidden corners most visitors miss.", "Food & local life": "A food lover's day — markets, street food and a local cooking experience.", "Adventure": "An adventure day — outdoor thrills arranged with trusted local operators.", "Shopping": "A shopping day — malls, markets and the best local buys, with bargaining tips from us." }[a.interest] || "A day shaped around your interests, arranged by Bhavna."]
-  ],
-  fillers: [
-    ["Free exploration day", "No fixed plan — wander with our handpicked local tips in your pocket."],
-    ["Second-look day", "Revisit your favourite spot from the trip, slower this time — or let Bhavna add the sight you skipped."],
-    ["Local life day", "Markets, neighbourhood cafés and everyday local corners beyond the tourist trail."]
-  ],
-  last: ["Souvenirs & departure", "Last-minute buys and a relaxed meal before your transfer out."]
-};
-
-const PLAN_SETS = {
-  maldives: {
-    questions: [
-      { key: "island", label: "Which island area sounds right?", options: ["North Malé Atoll — speedboat, easy arrivals", "South Malé Atoll — speedboat, calmer waters", "Baa Atoll — mantas (May–Nov), UNESCO reefs", "South Ari Atoll — whale sharks, year-round", "A local island — Maafushi, Thulusdhoo, Dhigurah", "No preference — advise me"] },
-      { key: "style", label: "Stay style?", options: ["Luxury", "Premium", "Family-friendly", "Budget — local island guesthouse"] },
-      { key: "stay", label: "Sleep style?", options: ["Overwater villa", "Beach villa", "Guesthouse room", "Either — surprise me"] }
-    ],
-    picks: {
-      "Luxury": "Resorts Bhavna often books at this level: Soneva Jani and Cheval Blanc Randheli (Noonu Atoll), Soneva Fushi (Baa), One&Only Reethi Rah (North Malé), Waldorf Astoria Ithaafushi (South Malé). She will confirm the right one for your dates.",
-      "Premium": "Resorts Bhavna often books at this level: Kuramathi (Rasdhoo Atoll), Sun Siyam Iru Fushi (Noonu), Anantara Dhigu (South Malé), Hard Rock Hotel Maldives (North Malé). She will confirm the right one for your dates.",
-      "Family-friendly": "Family favourites Bhavna often books: Kuramathi (Bageecha Kids Club), Sun Siyam Olhuveli (South Malé), Siyam World (Noonu), Sun Siyam Iru Fushi. She will confirm the right one for your dates.",
-      "Budget — local island guesthouse": "The budget route: family-run guesthouses on local islands like Maafushi, Thulusdhoo or Dhigurah — designated bikini beach, daily snorkel and sandbank boats, and real Maldivian island life. Bhavna will pick the right island and guesthouse for you."
-    },
-    core: a => {
-      const isl = a.island || "";
-      const isLocal = isl.startsWith("A local island");
-      const transfer = isl.startsWith("North Malé") ? "a 15–55 minute speedboat ride — boats run day and night, so even a late flight works"
-        : isl.startsWith("South Malé") ? "a relaxed 30–45 minute speedboat ride"
-        : isl.startsWith("Baa") ? "a scenic seaplane flight of about 35 minutes (seaplanes fly in daylight — Bhavna will time it around your flight)"
-        : isl.startsWith("South Ari") ? "a seaplane, or a short domestic flight plus a boat ride"
-        : isLocal ? "a shared speedboat or the public ferry from Malé"
-        : "a transfer matched to your flight timings";
-      const home = isLocal ? "your guesthouse" : "your " + (a.stay === "Beach villa" ? "beach villa" : a.stay === "Overwater villa" ? "overwater villa" : a.stay === "Guesthouse room" ? "guesthouse" : "villa");
-      const marine = isl.startsWith("Baa") ? ["Manta day (in season)", "Snorkel Hanifaru Bay in Baa's UNESCO Biosphere Reserve — from May to November, mantas gather here in numbers found nowhere else. Outside the season, the house reef and nearby dive sites (thilas) take over."]
-        : isl.startsWith("South Ari") || (isLocal && isl.includes("Dhigurah")) ? ["Whale shark excursion", "A boat day in the South Ari Marine Protected Area, searching for whale sharks — they feed here all year. Sightings are never guaranteed, but this is the best water in the country for it."]
-        : isLocal ? ["Snorkel boat trip", "A guesthouse-run snorkel trip — turtles, rays and coral gardens, with a sandbank stop for photos and a swim."]
-        : ["House reef & sandbank day", "Snorkel the house reef straight off the beach in the morning, then a boat out to a white sandbank for a picnic swim."];
-      const flavour = a.style === "Family-friendly" ? ["Family day", "Kids' club and shallow-lagoon time for the little ones, a family snorkel safari, and an early movie night under the stars."]
-        : a.style === "Luxury" ? ["Private indulgence day", "A private sandbank picnic, a spa ritual in the afternoon and a candle-lit beach dinner to finish."]
-        : isLocal ? ["Resort day-visit", "A popular local-island move: a day pass to a nearby resort island for its pools, beach and restaurants — then back to your guesthouse by evening. (Local islands are alcohol-free and swimwear is for the designated bikini beach — Bhavna will brief you.)"]
-        : ["Water sports & diving day", "Jet-ski, parasailing or an introductory dive — or a certified fun dive on a coral thila, arranged with the dive centre."];
-      return [
-        ["Arrive & settle in", "Land at Malé (Velana International) and transfer by " + transfer + ". Check in to " + home + ", freshen up and take a gentle sunset walk — arrival days are for unwinding, not rushing."],
-        marine,
-        ["Sandbank & sunset dolphins", "A lazy morning, then an afternoon boat out to a sandbank, ending with a sunset cruise as dolphins ride the bow wave."],
-        flavour,
-        isLocal ? ["Island life day", "Cycle around the island, coffee at a harbour café, local crafts — and sunset at the sandbank tip."] : ["Local island visit", "A half-day trip to a nearby inhabited island — real Maldivian life, local cafés and souvenir crafts, so different from resort islands."]
-      ];
-    },
-    fillers: [
-      ["Reef day, round two", "A different snorkel or dive site — or try a night snorkel and see the reef wake up after dark."],
-      ["Sunset fishing & beach barbecue", "Traditional hand-line fishing at golden hour, then your catch grilled on the beach for dinner."],
-      ["Spa & wellness day", "A slow morning, a long spa ritual, yoga on the deck — the Maldives at its calmest."],
-      ["Diving discovery day", "A beginner-friendly discover-scuba session, or guided fun dives on a coral thila for certified divers."],
-      ["Lagoon picnic day", "A boat out to an empty sandbank with a picnic hamper, shade and nothing on the agenda but swimming."],
-      ["Pure leisure day", "No fixed plan — lagoon, pool and beach entirely at your pace, exactly as a long Maldives stay should feel."]
-    ],
-    last: ["Last lagoon morning", "A slow breakfast and one final swim, then your transfer back to Malé in time for your flight. (Seaplane guests leave earlier in the day — Bhavna times everything for you.)"]
+const MV_AREAS = {
+  northmale: {
+    label: "North Malé Atoll — speedboat, easy arrivals", short: "North Malé Atoll",
+    airport: "Velana International Airport, Malé",
+    transfer: "a 15–55 minute speedboat ride (boats run day and night, so even a late flight works)",
+    excursions: ["Banana Reef snorkelling", "Malé city and market tour", "Sandbank picnic trip", "Sunset dolphin cruise"],
+    resorts: [
+      { name: "One&Only Reethi Rah", area: "northmale", styles: ["Luxury"], stay: "grand beach and overwater villas spread across 12 beaches", activities: ["Private beach picnics on a secluded sandbank", "Spa and wellness rituals", "House-reef snorkelling and diving", "Tennis, art studio and water sports"], inclusions: ["daily breakfast", "private beach and pool access", "non-motorised water sports"] },
+      { name: "Hard Rock Hotel Maldives", area: "northmale", styles: ["Premium", "Family-friendly"], stay: "beach and overwater villas at the CROSSROADS marina", activities: ["Roxity Kids Club and Teen Spirit sessions", "Snorkelling and dive-centre trips", "Live music and themed dinners", "Exploring the CROSSROADS marina and shops"], inclusions: ["daily breakfast", "kids' club access", "lagoon water sports"] },
+      { name: "Bandos Maldives", area: "northmale", styles: ["Family-friendly", "Premium"], stay: "beach villas just a 15-minute speedboat ride from Malé", activities: ["Kokko Kids Club adventures", "House-reef snorkelling straight off the beach", "Glass-bottom boat rides and night fishing", "Dive school experiences"], inclusions: ["daily breakfast", "kids' club", "house reef access"] }
+    ]
   },
-  bali: {
-    questions: [
-      { key: "area", label: "Where do you want to stay?", options: ["Ubud", "Seminyak", "Kuta", "Nusa Dua", "A mix — split my stay"] },
-      { key: "mood", label: "What's your Bali mood?", options: ["Culture & temples", "Beach & nightlife", "Wellness & relaxation"] }
-    ],
-    core: a => [
-      ["Arrive in Bali", "Land at Denpasar and transfer to " + (a.area || "your stay") + ". Settle in, wander the neighbourhood and enjoy your first Balinese dinner."],
-      ["Temples & culture", "A guided day through Bali's spiritual side — ancient temples, traditional dance and artisan villages."],
-      ["Rice terraces & waterfalls", "The emerald Tegalalang terraces, a jungle waterfall swim and a coffee plantation tasting."],
-      ["Beach day", "Surf, beach clubs or pure downtime on the sand — paced exactly how you like it."],
-      ["Nusa Penida day trip", "A boat day to the island's famous cliffs and crystal bays, including the Kelingking viewpoint."]
-    ],
-    fillers: [
-      ["Explore at your pace", "Cafés, markets and hidden beaches — a free day with our local tips in your pocket."],
-      ["Mount Batur sunrise (optional)", "An early trek or jeep ride for sunrise over the caldera — or sleep in and take a slow spa morning instead."],
-      ["South Bali day", "Uluwatu temple on the cliffs, Padang Padang beach and a seafood dinner on the sand at Jimbaran."]
-    ],
-    last: ["Souvenirs & departure", "Last-minute shopping and a relaxing massage before your transfer to the airport."]
+  southmale: {
+    label: "South Malé Atoll — speedboat, calmer waters", short: "South Malé Atoll",
+    airport: "Velana International Airport, Malé",
+    transfer: "a relaxed 30–45 minute speedboat ride",
+    excursions: ["Guraidhoo local island and surf point", "Sunset dolphin cruise", "Sandbank and snorkelling trip", "Reef snorkelling at Cocoa Thila"],
+    resorts: [
+      { name: "Anantara Dhigu", area: "southmale", styles: ["Luxury", "Premium", "Family-friendly"], stay: "beach and overwater villas around a calm family lagoon", activities: ["Overwater spa treatments", "Surf breaks a short boat ride away", "Kids' club and family lagoon time", "Sunset cruises from the jetty"], inclusions: ["daily breakfast", "lagoon activities", "kids' club"] },
+      { name: "Sun Siyam Olhuveli", area: "southmale", styles: ["Premium", "Family-friendly"], stay: "beach and water villas spread over three linked islands", activities: ["Kids' club and family pools", "House-reef snorkelling", "Jetty sunset fishing", "Water sports centre fun"], inclusions: ["daily breakfast", "family pools", "kids' club access"] },
+      { name: "Adaaran Club Rannalhi", area: "southmale", styles: ["Premium"], stay: "beach rooms and water bungalows on a compact, friendly island", activities: ["House-reef snorkelling", "Night fishing trips", "Spa treatments", "Excursion-desk boat trips"], inclusions: ["daily breakfast", "beach and reef access"] }
+    ]
   },
-  dubai: {
-    questions: [
-      { key: "area", label: "Which area for your hotel?", options: ["Downtown — Burj Khalifa side", "Dubai Marina", "Palm Jumeirah", "Deira — old Dubai"] },
-      { key: "style", label: "Your Dubai style?", options: ["Luxury", "Family fun", "City explorer"] }
-    ],
-    core: a => [
-      ["Arrive in Dubai", "Check in around " + shortOpt(a.area || "Downtown") + " and take an evening stroll — the city lights are the first attraction."],
-      ["Icons day", "Burj Khalifa from the top, Dubai Mall, and the dancing fountains by night."],
-      ["Desert safari", "Dune bashing, camel rides, a desert-camp dinner and live shows under the stars."],
-      ["Old Dubai", "Gold and spice souks, an abra boat ride across the Creek and the Al Fahidi heritage quarter."],
-      ["Palm & beach day", "Palm Jumeirah and Atlantis, then a relaxed afternoon on the beach."]
-    ],
-    fillers: [
-      ["Your choice day", "An Abu Dhabi day trip, a theme park, or pure shopping — we will line it up for you."],
-      ["Water & thrill day", "Aquaventure or IMG Worlds, or a yacht afternoon around the Marina and the Palm."],
-      ["Culture & cuisine day", "Alserkal Avenue galleries, a food tour through Deira's eateries and a sunset abra ride."]
-    ],
-    last: ["Last looks & departure", "A final mall run or a slow brunch, then your transfer to the airport."]
+  baa: {
+    label: "Baa Atoll — mantas (May–Nov), UNESCO reefs", short: "Baa Atoll",
+    airport: "Velana International Airport, Malé",
+    transfer: "a scenic 35-minute seaplane flight (seaplanes fly in daylight — Bhavna times it around your flight)",
+    excursions: ["Hanifaru Bay manta snorkelling (May–Nov, UNESCO reserve)", "Coral garden snorkelling", "Turtle safari", "Dharavandhoo local island visit"],
+    resorts: [
+      { name: "Soneva Fushi", area: "baa", styles: ["Luxury"], stay: "barefoot-luxury beach villas hidden in jungle greenery", activities: ["Open-air cinema under the stars", "Observatory stargazing", "Glass-blowing studio and cooking classes", "Private sandbank experiences"], inclusions: ["daily breakfast", "a bicycle for every villa", "non-motorised water sports"] },
+      { name: "Four Seasons Landaa Giraavaru", area: "baa", styles: ["Luxury"], stay: "beach and overwater villas inside a UNESCO biosphere reserve", activities: ["Marine Discovery Centre and turtle rehabilitation visit", "Manta snorkel safaris (in season)", "Ayurvedic spa village rituals", "Seaplane photo flights over the atoll"], inclusions: ["daily breakfast", "marine centre experiences", "yoga and wellness sessions"] },
+      { name: "Royal Island Resort & Spa", area: "baa", styles: ["Premium"], stay: "beach bungalows a short hop from Hanifaru Bay", activities: ["Hanifaru Bay trips (in season)", "House-reef diving", "Sunset fishing", "Spa and tennis"], inclusions: ["daily breakfast", "beach access", "excursion desk"] }
+    ]
   },
-  seychelles: {
-    questions: [
-      { key: "base", label: "Your island base?", options: ["Mahé", "Praslin", "La Digue", "Island-hopping"] },
-      { key: "style", label: "Your Seychelles style?", options: ["Luxury", "Relaxed beach", "Nature & hiking"] }
-    ],
-    core: a => [
-      ["Arrive & unwind", "Settle into your stay (" + (a.base || "Mahé") + " base) and watch your first Indian Ocean sunset."],
-      ["Beach trail day", "Famous beaches one after another — powdery sand, granite boulders and swim stops along the way."],
-      ["Vallée de Mai, Praslin", "The ancient palm forest called the Garden of Eden, then Anse Lazio — often called the world's best beach."],
-      ["La Digue slow day", "Bicycles, giant tortoises and the picture-perfect boulders of Anse Source d'Argent."],
-      ["Reef day", "Snorkelling or a glass-bottom boat over coral gardens full of tropical fish."]
-    ],
-    fillers: [
-      ["Barefoot leisure day", "No plan at all — just you, the sand and the sea."],
-      ["Victoria & gardens day", "The tiny capital Victoria, its clock tower and market, then the botanical gardens and a viewpoint drive."],
-      ["Marine park day", "A boat day in Ste Anne Marine Park — giant tortoises, reefs and a Creole barbecue on Moyenne Island."]
-    ],
-    last: ["Last swim & departure", "A final dip and a fresh seafood lunch before your transfer to the airport."]
+  southari: {
+    label: "South Ari Atoll — whale sharks, year-round", short: "South Ari Atoll",
+    airport: "Velana International Airport, Malé",
+    transfer: "a seaplane of about 25–30 minutes, or a short domestic flight plus a speedboat",
+    excursions: ["Whale shark safari in the South Ari MPA", "Manta point snorkelling", "Night diving", "Dhigurah local island and sandbank walk"],
+    resorts: [
+      { name: "LUX* South Ari Atoll", area: "southari", styles: ["Luxury", "Premium"], stay: "beach and overwater villas along a long, calm lagoon", activities: ["Whale shark excursions", "House-reef diving", "Beach cinema and pop-up dining", "Spa and yoga sessions"], inclusions: ["daily breakfast", "lagoon activities", "beach facilities"] },
+      { name: "Centara Grand Island Resort", area: "southari", styles: ["Premium", "Family-friendly"], stay: "beach suites and overwater villas, proudly family-focused", activities: ["Kids' club and family pool days", "House-reef snorkelling", "Whale shark trips", "Spa and water sports"], inclusions: ["daily breakfast", "kids' club", "house reef access"] },
+      { name: "Villa Park (Sun Island)", area: "southari", styles: ["Family-friendly", "Premium"], stay: "one of the Maldives' largest resort islands, all gardens and lagoons", activities: ["Whale shark excursions", "Stingray and shark feeding shows", "Cycling the island gardens", "Spa and water sports"], inclusions: ["daily breakfast", "island bicycles", "lagoon access"] }
+    ]
   },
-  mauritius: {
-    questions: [
-      { key: "coast", label: "Which coast suits you?", options: ["North — Grand Baie side", "West — sunset side", "East — quiet & breezy", "South — wild & scenic"] },
-      { key: "style", label: "Your Mauritius style?", options: ["Luxury", "Family-friendly", "Golf & leisure"] }
-    ],
-    core: a => [
-      ["Arrive in Mauritius", "Transfer to your stay on the " + shortOpt(a.coast || "North").toLowerCase() + " coast and unwind with a sunset by the lagoon."],
-      ["Catamaran day", "Sail to Île aux Cerfs — turquoise lagoons, snorkelling and a barbecue on board."],
-      ["The colourful south", "Chamarel's seven-coloured earth, waterfalls and the sacred lake of Grand Bassin."],
-      ["Port Louis & gardens", "The capital's markets and waterfront, then the famous Pamplemousses botanical gardens."],
-      ["Sea adventures", "Swim with dolphins, try parasailing, or walk under the sea — your pick."]
-    ],
-    fillers: [
-      ["Resort leisure day", "Beach, pool and spa — a day with nothing on the clock."],
-      ["Wild west day", "Casela Nature Parks — safari, ziplines and walking with lions experiences for the adventurous."],
-      ["Tea & rum route day", "The Bois Chéri tea fields, a rum distillery tasting and colonial mansions in the green south."]
-    ],
-    last: ["Last lagoon morning", "A slow breakfast and a final swim before your airport transfer."]
+  local: {
+    label: "A local island — Maafushi, Thulusdhoo, Dhigurah", short: "a local island",
+    airport: "Velana International Airport, Malé",
+    transfer: "a shared speedboat or the public ferry from Malé (your guesthouse arranges it)",
+    excursions: ["Snorkel trips to reefs and turtle points", "Sandbank picnics", "Resort island day-visits", "Night fishing and dolphin cruises"],
+    resorts: [
+      { name: "Maafushi guesthouses", area: "local", styles: ["Budget — local island guesthouse"], stay: "family-run guesthouses near the bikini beach (Bhavna picks the right one for you)", activities: ["Daily snorkel and sandbank boats", "Bikini beach days", "Dive school outings", "Island cafés and souvenir streets"], inclusions: ["daily breakfast", "excursion desk bookings", "airport transfer help"] },
+      { name: "Thulusdhoo guesthouses", area: "local", styles: ["Budget — local island guesthouse"], stay: "surf-island guesthouses by a soft lagoon", activities: ["Cokes and Chickens surf breaks", "Snorkelling and sandbank trips", "Island cycling", "Local cafés and crafts"], inclusions: ["daily breakfast", "surf boat transfers (arranged)", "excursion desk bookings"] },
+      { name: "Dhigurah guesthouses", area: "local", styles: ["Budget — local island guesthouse"], stay: "guesthouses on a long, quiet island beside the whale shark area", activities: ["Whale shark tours (year-round)", "Long sandbank walks", "House-reef snorkelling", "Bicycle island days"], inclusions: ["daily breakfast", "tour bookings", "transfer help"] }
+    ]
   }
 };
+const MV_NOPREF_KEY = "advise";
+MV_AREAS[MV_NOPREF_KEY] = {
+  label: "No preference — advise me", short: "the Maldives",
+  airport: "Velana International Airport, Malé",
+  transfer: "a transfer matched to your resort and flight timings",
+  excursions: ["Sandbank picnic trip", "Sunset dolphin cruise", "House-reef snorkelling", "Local island visit"],
+  resorts: [MV_AREAS.northmale.resorts[0], MV_AREAS.baa.resorts[0], MV_AREAS.southari.resorts[0], MV_AREAS.local.resorts[0]]
+};
 
-function destIdByName(name) { const d = DESTINATIONS.find(x => x.name === name); return d ? d.id : null; }
+function mvResorts() {
+  const a = MV_AREAS[planState.answers.area];
+  return a ? a.resorts : [];
+}
+function mvSelectedResort() {
+  return mvResorts().find(r => r.name === planState.answers.resort) || null;
+}
 function planGroups() {
-  const groups = [];
-  if (!planState.destId) groups.push({ key: "dest", label: "Where would you like to go?", options: DESTINATIONS.map(d => d.name) });
-  const set = PLAN_SETS[planState.destId] || GENERIC_SET;
-  groups.push(...set.questions, DAYS_GROUP);
+  const groups = [
+    { key: "area", label: "Which island area sounds right?", options: Object.keys(MV_AREAS).map(k => MV_AREAS[k].label) },
+    { key: "style", label: "Stay style?", options: MV_STYLES }
+  ];
+  if (planState.answers.area) groups.push({ key: "resort", label: "Choose your resort / stay", options: mvResorts().map(r => r.name) });
+  groups.push(DAYS_GROUP);
   return groups;
 }
 function renderPlanQuestions() {
-  const d = DESTINATIONS.find(x => x.id === planState.destId);
-  document.getElementById("planTitle").textContent = d ? "Your " + d.name + " plan" : "Your trip plan";
+  document.getElementById("planTitle").textContent = "Your Maldives plan";
   const wrap = document.getElementById("planQuestions");
   wrap.innerHTML = "";
   planGroups().forEach(g => {
@@ -522,23 +454,51 @@ function renderPlanQuestions() {
     g.options.forEach(opt => {
       const b = document.createElement("button");
       b.type = "button";
-      b.className = "chip" + (planState.answers[g.key] === opt ? " active" : "");
+      const val = g.key === "area" ? (Object.keys(MV_AREAS).find(k => MV_AREAS[k].label === opt)) : opt;
+      b.className = "chip" + (planState.answers[g.key] === val ? " active" : "");
       b.textContent = opt;
       b.addEventListener("click", () => {
-        planState.answers[g.key] = opt;
-        if (g.key === "dest") { planState.destId = destIdByName(opt); renderPlanQuestions(); return; }
-        chips.querySelectorAll(".chip").forEach(c => c.classList.toggle("active", c === b));
-        validatePlan();
+        if (g.key === "area" && planState.answers.area !== val) { planState.answers.resort = ""; }
+        planState.answers[g.key] = val;
+        renderPlanQuestions();
       });
       chips.appendChild(b);
     });
     div.appendChild(chips);
+    if (g.key === "style" && planState.answers.area === "local" && planState.answers.style && planState.answers.style !== "Budget — local island guesthouse") {
+      const tip = document.createElement("p");
+      tip.className = "resort-tip";
+      tip.textContent = "Local islands are the budget route — guesthouses there pair with the 'Budget' style. Resort styles live on the resort atolls above.";
+      div.appendChild(tip);
+    }
+    if (g.key === "resort") {
+      const r = mvSelectedResort();
+      const det = document.createElement("div");
+      det.className = "resort-detail";
+      if (r) {
+        const home = MV_AREAS[r.area];
+        det.innerHTML = `<strong>${r.name}</strong> — ${r.stay}.<br>` +
+          `<span>Getting there:</span> ${home.transfer}.<br>` +
+          `<span>Signature experiences:</span> ${r.activities.join(" · ")}.<br>` +
+          `<span>Typical inclusions (Bhavna confirms):</span> ${r.inclusions.join(", ")}.`;
+      } else {
+        det.textContent = "Tap a stay to see how you get there, its signature experiences and typical inclusions.";
+      }
+      div.appendChild(det);
+    }
     wrap.appendChild(div);
   });
+  if (!planState.answers.area) {
+    const hint = document.createElement("p");
+    hint.className = "resort-tip";
+    hint.textContent = "Pick an island area first — the resort list updates live to match it.";
+    wrap.insertBefore(hint, wrap.children[1] || null);
+  }
   validatePlan();
 }
 function validatePlan() {
-  document.getElementById("planGo").disabled = planGroups().some(g => !planState.answers[g.key]);
+  const a = planState.answers;
+  document.getElementById("planGo").disabled = !(a.area && a.style && a.resort && a.days);
 }
 function openPlan(destId, preset = {}) {
   // PILOT SCOPE (Rashmi, 19 Nov 2026): the Plan popup is Maldives-only for now.
@@ -549,7 +509,7 @@ function openPlan(destId, preset = {}) {
     document.getElementById("enquire").scrollIntoView({ behavior: "smooth" });
     return;
   }
-  planState = { destId: "maldives", answers: {}, tourType: preset.tourType || "", date: preset.date || "" };
+  planState = { answers: {}, tourType: preset.tourType || "", date: preset.date || "" };
   if (preset.durLabel) planState.answers.days = preset.durLabel;
   document.getElementById("planStep1").hidden = false;
   document.getElementById("planStep2").hidden = true;
@@ -570,34 +530,45 @@ document.getElementById("planBack").addEventListener("click", () => {
 });
 document.getElementById("planCloseBtn").addEventListener("click", closePlan);
 
-function composeDays(set, d, a, n) {
-  const core = set.core(a, d);
-  const out = [];
-  const bodyCount = n - 1;
-  if (bodyCount <= core.length) out.push(...core.slice(0, bodyCount));
-  else {
-    out.push(...core);
-    let i = 0;
-    while (out.length < bodyCount) out.push(set.fillers[i++ % set.fillers.length]);
+function composeMaldives(a, n) {
+  const R = mvSelectedResort();
+  const A = MV_AREAS[R.area];
+  const incl = R.inclusions.join(", ");
+  const days = [];
+  days.push(["Arrive & settle in at " + R.name,
+    `Land at ${A.airport}. Your transfer — ${A.transfer} — brings you straight to ${R.name}: ${R.stay}. Check in, freshen up and take a gentle sunset walk. Your stay includes ${incl} (Bhavna confirms the live inclusions for your dates).`]);
+  const middles = [];
+  const act = R.activities, exc = A.excursions;
+  const maxLen = Math.max(act.length, exc.length);
+  for (let i = 0; i < maxLen; i++) {
+    if (act[i]) middles.push([act[i].split("—")[0].trim(),
+      `Breakfast at ${R.name} (included in your stay), then: ${act[i].charAt(0).toLowerCase() + act[i].slice(1)} — one of the experiences ${R.name} is loved for. Evening at leisure.`]);
+    if (exc[i]) middles.push([exc[i].split("(")[0].trim(),
+      `After breakfast, head out on the water: ${exc[i].charAt(0).toLowerCase() + exc[i].slice(1)} — a signature ${A.short} excursion, arranged with trusted local operators.`]);
   }
-  out.push(set.last);
-  return out;
+  middles.push(["A slow day, your way",
+    `No fixed plan — lagoon, pool and beach at your own pace, with ${R.name}'s team on hand for anything you fancy.`]);
+  middles.push(["Second helping of paradise",
+    `Revisit your favourite spot from the trip so far, or let Bhavna slot in the one experience you have been saving — she will advise what fits the weather and season.`]);
+  const need = n - 2;
+  const body = middles.slice(0, need);
+  let k = 0;
+  while (body.length < need) body.push(middles[k++ % middles.length]);
+  days.push(...body);
+  days.push(["Last morning & departure",
+    `Breakfast and one final swim, then ${A.transfer.replace(/^a |^an /, "the ")} back to ${A.airport} in time for your flight${A.transfer.includes("seaplane") ? " — seaplane guests leave earlier in the day, and Bhavna times everything for you" : ""}.`]);
+  return days;
 }
 let planSummary = "", planDayLines = "";
 document.getElementById("planGo").addEventListener("click", () => {
-  const d = DESTINATIONS.find(x => x.id === planState.destId);
-  const set = PLAN_SETS[d.id] || GENERIC_SET;
-  const n = DAYS_MAP[planState.answers.days] || 5;
-  const days = composeDays(set, d, planState.answers, n);
-  const picks = Object.keys(planState.answers).filter(k => k !== "days" && k !== "dest").map(k => planState.answers[k]);
-  planSummary = d.name + " · " + n + " days" + (planState.date ? " · from " + planState.date : "") + (picks.length ? " · " + picks.join(" · ") : "");
+  const a = planState.answers;
+  const R = mvSelectedResort();
+  const A = MV_AREAS[R.area];
+  const n = DAYS_MAP[a.days] || 5;
+  const days = composeMaldives(a, n);
+  planSummary = R.name + " · " + A.short + " · " + n + " days · " + a.style + (planState.date ? " · from " + planState.date : "");
   planDayLines = days.map((day, i) => "Day " + (i + 1) + ": " + day[0] + " — " + day[1]).join("\n");
   document.getElementById("planMeta").textContent = planSummary;
-  const picksEl = document.getElementById("planPicks");
-  const islAns = planState.answers.island || "";
-  const pickKey = islAns.startsWith("A local island") ? "Budget — local island guesthouse" : planState.answers.style;
-  if (set.picks && pickKey && set.picks[pickKey]) { picksEl.textContent = set.picks[pickKey]; picksEl.hidden = false; }
-  else picksEl.hidden = true;
   document.getElementById("planDays").innerHTML =
     days.map(day => `<li><span class="day-badge"></span><div><strong>${day[0]}</strong><p>${day[1]}</p></div></li>`).join("");
   document.getElementById("planWhats").href = "https://wa.me/" + WA_NUMBER + "?text=" +
@@ -608,8 +579,7 @@ document.getElementById("planGo").addEventListener("click", () => {
   planOverlay.querySelector(".overlay-body").scrollTop = 0;
 });
 document.getElementById("planContact").addEventListener("click", () => {
-  const d = DESTINATIONS.find(x => x.id === planState.destId);
-  if (d) document.getElementById("fDest").value = d.name;
+  document.getElementById("fDest").value = "Maldives";
   if (planState.tourType) document.getElementById("fTour").value = planState.tourType;
   if (planState.date) document.getElementById("fDate").value = planState.date;
   document.getElementById("fMsg").value = "From the trip planner — " + planSummary + "\nSample plan:\n" + planDayLines;
@@ -660,12 +630,36 @@ document.getElementById("testiPrev").addEventListener("click", () => showTesti(t
 document.getElementById("testiNext").addEventListener("click", () => showTesti(testiIdx + 1));
 document.querySelectorAll(".dotb").forEach(d => d.addEventListener("click", () => showTesti(+d.dataset.slide)));
 
+// Hero slider — 3 slides, smooth crossfade, auto-rotate, dots, pause on hover.
+// Reduced motion: no auto-rotation (dots still work, without the zoom).
+(function heroSlider() {
+  const slides = [...document.querySelectorAll(".hero-slide")];
+  const texts = [...document.querySelectorAll(".hero-text")];
+  const dots = [...document.querySelectorAll(".hero-dot")];
+  if (!slides.length) return;
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let idx = 0, timer = null;
+  function go(i) {
+    idx = (i + slides.length) % slides.length;
+    slides.forEach((s, j) => s.classList.toggle("active", j === idx));
+    texts.forEach((t, j) => t.classList.toggle("active", j === idx));
+    dots.forEach((d, j) => d.classList.toggle("active", j === idx));
+  }
+  function start() { if (!reduced && !timer) timer = setInterval(() => go(idx + 1), 6000); }
+  function stop() { clearInterval(timer); timer = null; }
+  dots.forEach(d => d.addEventListener("click", () => { stop(); go(+d.dataset.slide); start(); }));
+  const hero = document.querySelector(".hero");
+  hero.addEventListener("mouseenter", stop);
+  hero.addEventListener("mouseleave", start);
+  start();
+})();
+
 // Parallax — transform-only, single rAF loop, no libraries.
 // Hero background drifts slower than the headline; doodles float at their own
 // speeds; section photos shift gently. Fully disabled for reduced motion.
 (function parallax() {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  const heroImg = document.getElementById("heroImg");
+  const heroImg = document.getElementById("heroMedia");
   const heroContent = document.querySelector(".hero-content");
   const hero = document.querySelector(".hero");
   const doodles = [...document.querySelectorAll(".doodle")];
@@ -678,7 +672,7 @@ document.querySelectorAll(".dotb").forEach(d => d.addEventListener("click", () =
     const hr = hero.getBoundingClientRect();
     if (hr.bottom > 0) {
       const y = -hr.top;
-      heroImg.style.transform = `translate3d(0, ${y * 0.30}px, 0) scale(1.14)`;
+      heroImg.style.transform = `translate3d(0, ${y * 0.30}px, 0)`;
       heroContent.style.transform = `translate3d(0, ${y * 0.12}px, 0)`;
     }
     // Doodles: offset by distance of their section from viewport centre × speed
@@ -746,7 +740,7 @@ document.getElementById("enquiryForm").addEventListener("submit", e => {
   if (phone.replace(/\D/g, "").length < 10) { err.textContent = "That phone number looks short — please check it so Bhavna can reach you."; return; }
   err.textContent = "";
   const lines = [
-    "New trip enquiry — Elite Exposures website",
+    "New trip enquiry — Elite Exposures Travel website",
     "Name: " + name, "Phone: " + phone,
     f.email.value.trim() ? "Email: " + f.email.value.trim() : null,
     "Destination: " + dest, "Tour type: " + f.tourType.value,

@@ -70,7 +70,12 @@ header.scrolled{box-shadow:0 10px 30px rgba(13,43,69,.1)}
 .plan-head .ov-close{flex:none;width:38px;height:38px;border-radius:50%;border:0;background:#fff;color:var(--navy);font-size:.95rem;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.25)}
 .plan-intro{color:var(--muted);margin-bottom:1.1rem}
 .q-group{margin-bottom:1.15rem}
-.q-label{font-family:'Montez',cursive;font-weight:400;color:var(--blue-dark);margin-bottom:.5rem;font-size:1.55rem;line-height:1.1}
+.q-label{font-weight:800;color:var(--navy);margin-bottom:.5rem;font-size:1rem}
+.resort-detail{margin-top:.7rem;background:rgba(255,255,255,.85);border:1px solid var(--line);border-radius:14px;padding:.75rem 1rem;font-size:.92rem;color:var(--muted);line-height:1.55}
+.resort-detail strong{color:var(--navy)}
+.resort-detail span{font-weight:700;color:var(--blue-dark)}
+.resort-tip{margin-top:.6rem;font-size:.88rem;color:var(--blue-deep);font-weight:600}
+.plan-price{font-weight:800;color:var(--navy);margin:0 0 .4rem}
 .chips{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center}
 .chip{border:1.5px solid var(--line);background:rgba(255,255,255,.92);border-radius:999px;padding:.48rem .95rem;font:inherit;font-weight:600;font-size:.92rem;color:var(--navy);cursor:pointer;transition:.2s}
 .chip:hover{border-color:var(--blue);color:var(--blue-dark)}
@@ -81,7 +86,7 @@ header.scrolled{box-shadow:0 10px 30px rgba(13,43,69,.1)}
 .plan-picks{color:var(--navy);background:rgba(255,247,232,.94);border:1px solid #f0dcae;border-radius:12px;padding:.7rem 1rem;margin:-.4rem 0 1rem;font-size:.94rem}
 .plan-note{color:var(--muted);margin:1rem 0 1.2rem;font-size:.95rem}
 .plan-panel .ov-days li{flex-direction:column;align-items:center;text-align:center;gap:.35rem;background:rgba(255,255,255,.82)}
-.plan-panel .ov-days li strong{font-family:'Montez',cursive;font-weight:400;font-size:1.45rem;color:var(--blue-dark);line-height:1.1}
+.plan-panel .ov-days li strong{font-weight:800;font-size:1.02rem;color:var(--navy);line-height:1.25}
 .plan-footer{flex:none;display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;padding:.85rem 1rem;border-top:1px solid var(--line);background:rgba(255,255,255,.96)}
 .plan-footer[hidden]{display:none}
 .btn-plan-sm{background:#fff;color:var(--blue-dark);border:1.5px solid var(--blue);border-radius:999px;padding:.42rem .9rem;font:inherit;font-weight:700;font-size:.88rem;cursor:pointer}
@@ -90,8 +95,18 @@ header.scrolled{box-shadow:0 10px 30px rgba(13,43,69,.1)}
 
 /* Hero */
 .hero{position:relative;padding:clamp(4rem,10vw,7.5rem) clamp(1rem,4vw,3rem) clamp(6rem,10vw,8rem);overflow:hidden}
-.hero-media{position:absolute;inset:0}
+.hero-media{position:absolute;left:0;right:0;top:-10%;height:120%;will-change:transform}
 .hero-media img{width:100%;height:100%;object-fit:cover}
+.hero-slide{position:absolute;inset:0;opacity:0;transition:opacity 1.4s ease}
+.hero-slide.active{opacity:1}
+.hero-slide.active img{animation:kenburns 7.5s ease forwards}
+@keyframes kenburns{from{transform:scale(1.05)}to{transform:scale(1.15)}}
+.hero-texts{display:grid}
+.hero-text{grid-area:1/1;opacity:0;transform:translateY(16px);transition:opacity .9s ease,transform .9s ease;pointer-events:none}
+.hero-text.active{opacity:1;transform:none;pointer-events:auto}
+.hero-dots{display:flex;gap:.5rem;margin-top:1.5rem}
+.hero-dot{width:30px;height:4px;border-radius:2px;border:0;background:rgba(255,255,255,.4);cursor:pointer;padding:0;transition:background .3s}
+.hero-dot.active{background:#fff}
 .hero-shade{position:absolute;inset:0;background:linear-gradient(95deg,rgba(8,31,51,.72) 0%,rgba(8,31,51,.38) 48%,rgba(8,31,51,.05) 100%)}
 .hero-content{position:relative;max-width:1280px;margin:0 auto;color:#fff}
 .hero-content h1{font-size:clamp(2.8rem,7.5vw,5.2rem);font-weight:800;line-height:1.03;margin:.3rem 0 1rem;letter-spacing:-.01em}
@@ -313,7 +328,6 @@ footer p{font-size:.93rem}
 .reveal.visible{opacity:1;transform:none}
 
 /* Parallax (transform-only, rAF-driven in app.js; disabled for reduced motion) */
-.hero-media img{transform:scale(1.14);will-change:transform}
 .hero-content{will-change:transform;transition:opacity .6s ease}
 .doodles{position:relative;overflow:hidden}
 .doodles>*{position:relative;z-index:1}
@@ -321,7 +335,10 @@ footer p{font-size:.93rem}
 img[data-plx-img]{will-change:transform}
 @media (prefers-reduced-motion: reduce){
   .reveal{opacity:1;transform:none;transition:none}
-  .hero-media img{transform:none}
+  .hero-media{transform:none}
+  .hero-slide{transition:none}
+  .hero-slide.active img{animation:none}
+  .hero-text{transition:none}
   html{scroll-behavior:auto}
 }
 
