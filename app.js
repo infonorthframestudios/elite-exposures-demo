@@ -485,15 +485,25 @@ mainNav.querySelectorAll("a").forEach(a => a.addEventListener("click", () => clo
 function closeNavAndDrops() {
   mainNav.classList.remove("open");
   navToggle.setAttribute("aria-expanded", "false");
-  document.querySelectorAll(".has-drop.open").forEach(x => {
+  document.querySelectorAll(".has-drop").forEach(x => {
     x.classList.remove("open");
-    x.querySelector(".drop-btn").setAttribute("aria-expanded", "false");
+    // Suppress hover re-open until the pointer leaves the item: without
+    // this, choosing a country scrolled to the form while the CSS :hover
+    // kept the panel floating over it (the pointer never left the header).
+    x.classList.add("drop-suppress");
+    const b = x.querySelector(".drop-btn");
+    if (b) b.setAttribute("aria-expanded", "false");
   });
 }
+document.querySelectorAll(".has-drop").forEach(item => {
+  item.addEventListener("mouseleave", () => item.classList.remove("drop-suppress"));
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeNavAndDrops(); });
 document.querySelectorAll(".drop-btn").forEach(btn => {
   btn.addEventListener("click", e => {
     e.stopPropagation();
     const item = btn.closest(".has-drop");
+    item.classList.remove("drop-suppress");
     const was = item.classList.contains("open");
     document.querySelectorAll(".has-drop.open").forEach(x => {
       x.classList.remove("open");
