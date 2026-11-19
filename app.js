@@ -468,8 +468,18 @@ const mainNav = document.querySelector(".main-nav");
 navToggle.addEventListener("click", () => {
   const open = mainNav.classList.toggle("open");
   navToggle.setAttribute("aria-expanded", open);
+  if (open) {
+    // Pin the header to the top when the menu opens: the panel's height
+    // budget assumes a stuck header, so opening at scroll 0 (banner +
+    // top bar still above the header) would push the panel's tail —
+    // Contact and Admin — behind the fixed bottom bar, unreachable.
+    const header = document.querySelector("header");
+    if (header && header.getBoundingClientRect().top > 0) {
+      window.scrollTo(0, window.scrollY + header.getBoundingClientRect().top);
+    }
+  }
 });
-mainNav.querySelectorAll("a").forEach(a => a.addEventListener("click", () => mainNav.classList.remove("open")));
+mainNav.querySelectorAll("a").forEach(a => a.addEventListener("click", () => closeNavAndDrops()));
 
 // ---------- Header dropdowns, stories, admin (Batch #4) ----------
 function closeNavAndDrops() {
