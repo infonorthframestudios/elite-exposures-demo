@@ -418,7 +418,7 @@ document.querySelectorAll(".dotb").forEach(d => d.addEventListener("click", () =
     // Hero: background at ~30% scroll speed, headline at ~88% (lags just a touch)
     const hr = hero.getBoundingClientRect();
     if (hr.bottom > 0) {
-      const y = -hr.top;
+      const y = Math.max(0, -hr.top);
       heroImg.style.transform = `translate3d(0, ${y * 0.30}px, 0)`;
       heroContent.style.transform = `translate3d(0, ${y * 0.12}px, 0)`;
     }
