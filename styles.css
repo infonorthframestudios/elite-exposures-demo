@@ -35,6 +35,8 @@ header.scrolled{box-shadow:0 10px 30px rgba(13,43,69,.1)}
 .footer-logo{background:#fff;border-radius:12px;padding:6px 12px;height:46px}
 .brand-text{font-weight:800;letter-spacing:.05em;font-size:.98rem;line-height:1.15;color:var(--navy);display:flex;flex-direction:column}
 .brand-text small{font-size:.58rem;letter-spacing:.28em;color:var(--blue);font-weight:800}
+.brand{flex:none;line-height:0}
+.brand-logo{object-fit:contain}
 .main-nav{display:flex;gap:1.6rem;margin-left:auto}
 .main-nav a{text-decoration:none;font-weight:700;font-size:.93rem;color:var(--navy)}
 .main-nav a:hover{color:var(--blue)}
@@ -102,10 +104,11 @@ header.scrolled{box-shadow:0 10px 30px rgba(13,43,69,.1)}
 .nav-admin{color:var(--muted)}
 .caret{font-size:.68rem;transition:transform .25s}
 .has-drop.open .caret{transform:rotate(180deg)}
-.mega{position:absolute;top:calc(100% + 14px);left:50%;transform:translate(-50%,10px);background:#fff;border-radius:18px;box-shadow:0 30px 60px rgba(13,43,69,.18);padding:1.25rem 1.5rem;display:grid;grid-template-columns:repeat(4,minmax(150px,auto));gap:1.7rem;opacity:0;visibility:hidden;transition:opacity .25s,transform .25s,visibility .25s;z-index:60}
-.drop{position:absolute;top:calc(100% + 14px);left:0;transform:translateY(10px);background:#fff;border-radius:16px;box-shadow:0 30px 60px rgba(13,43,69,.18);padding:.6rem;min-width:235px;opacity:0;visibility:hidden;transition:opacity .25s,transform .25s,visibility .25s;z-index:60}
-.has-drop:hover .mega,.has-drop:focus-within .mega,.has-drop.open .mega{opacity:1;visibility:visible;transform:translate(-50%,0)}
-.has-drop:hover .drop,.has-drop:focus-within .drop,.has-drop.open .drop{opacity:1;visibility:visible;transform:translateY(0)}
+.mega{position:absolute;top:calc(100% + 14px);left:50%;transform:translate(-50%,10px);background:#fff;border-radius:18px;box-shadow:0 30px 60px rgba(13,43,69,.18);padding:1.25rem 1.5rem;display:none;grid-template-columns:repeat(4,minmax(150px,auto));gap:1.7rem;z-index:60}
+.drop{position:absolute;top:calc(100% + 14px);left:0;transform:translateY(10px);background:#fff;border-radius:16px;box-shadow:0 30px 60px rgba(13,43,69,.18);padding:.6rem;min-width:235px;display:none;z-index:60}
+.has-drop:hover .mega,.has-drop:focus-within .mega,.has-drop.open .mega{display:grid;transform:translate(-50%,0);animation:dropIn .25s ease}
+.has-drop:hover .drop,.has-drop:focus-within .drop,.has-drop.open .drop{display:block;transform:translateY(0);animation:dropIn .25s ease}
+@keyframes dropIn{from{opacity:0}to{opacity:1}}
 .mega-col h5{font-size:.7rem;letter-spacing:.13em;text-transform:uppercase;color:var(--blue-dark);margin:.35rem 0 .5rem}
 .mega-col a,.drop a{display:block;padding:.32rem .45rem;border-radius:8px;text-decoration:none;color:var(--navy);font-weight:600;font-size:.92rem;white-space:nowrap}
 .mega-col a:hover,.drop a:hover{background:var(--tint);color:var(--blue-dark)}
@@ -144,13 +147,13 @@ header.scrolled{box-shadow:0 10px 30px rgba(13,43,69,.1)}
 .hero{position:relative;padding:clamp(4rem,10vw,7.5rem) clamp(1rem,4vw,3rem) clamp(6rem,10vw,8rem);overflow:hidden}
 .hero-media{position:absolute;left:0;right:0;top:-10%;height:120%;will-change:transform}
 .hero-media img{width:100%;height:100%;object-fit:cover}
-.hero-slide{position:absolute;inset:0;opacity:0;transition:opacity 1.4s ease}
-.hero-slide.active{opacity:1}
+.hero-slide{position:absolute;inset:0;opacity:0;visibility:hidden;transition:opacity 1.4s ease,visibility 0s 1.4s}
+.hero-slide.active{opacity:1;visibility:visible;transition:opacity 1.4s ease}
 .hero-slide.active img{animation:kenburns 7.5s ease forwards}
 @keyframes kenburns{from{transform:scale(1.05)}to{transform:scale(1.15)}}
 .hero-texts{display:grid}
-.hero-text{grid-area:1/1;opacity:0;transform:translateY(16px);transition:opacity .9s ease,transform .9s ease;pointer-events:none}
-.hero-text.active{opacity:1;transform:none;pointer-events:auto}
+.hero-text{grid-area:1/1;opacity:0;visibility:hidden;transform:translateY(16px);transition:opacity .9s ease,transform .9s ease,visibility 0s .9s;pointer-events:none}
+.hero-text.active{opacity:1;visibility:visible;transform:none;transition:opacity .9s ease,transform .9s ease;pointer-events:auto}
 .hero-dots{display:flex;gap:.5rem;margin-top:1.5rem}
 .hero-dot{width:30px;height:4px;border-radius:2px;border:0;background:rgba(255,255,255,.4);cursor:pointer;padding:0;transition:background .3s}
 .hero-dot.active{background:#fff}
@@ -396,10 +399,6 @@ img[data-plx-img]{will-change:transform}
   .topbar-right{display:none}
 }
 @media(max-width:760px){
-  .main-nav{display:none;position:absolute;top:100%;left:0;right:0;background:#fff;flex-direction:column;padding:1rem 1.4rem;gap:1rem;box-shadow:0 20px 40px rgba(13,43,69,.12)}
-  .main-nav.open{display:flex}
-  .nav-toggle{display:block}
-  .header-cta{display:none}
   .searchbar{flex-direction:column;border-radius:20px}
   .hs-field{border-right:0;border-bottom:1px solid var(--line);padding:.6rem .3rem}
   .hs-field:last-of-type{border-bottom:0}
@@ -428,11 +427,16 @@ img[data-plx-img]{will-change:transform}
   footer{padding-bottom:7.5rem}
 }
 
-/* Batch #4 — mobile nav: dropdowns become expandable sections */
+/* Batch #4 — below 1020px the nav collapses to the hamburger panel;
+   dropdowns become expandable sections inside it (fix: this breakpoint
+   previously lived at 760px while the Batch #4 blocks assumed 1020px) */
 @media(max-width:1020px){
+  .main-nav{display:none;position:absolute;top:100%;left:0;right:0;background:#fff;flex-direction:column;padding:1rem 1.4rem;gap:1rem;box-shadow:0 20px 40px rgba(13,43,69,.12);margin-left:0;max-height:calc(100vh - 70px);overflow-y:auto}
+  .main-nav.open{display:flex}
+  .nav-toggle{display:block}
   .main-nav .nav-item{width:100%}
   .main-nav .nav-link{width:100%;justify-content:space-between;padding:.55rem 0}
-  .mega,.drop{position:static;transform:none;box-shadow:none;min-width:0;padding:.3rem 0 .5rem .9rem;display:none;opacity:1;visibility:visible;transition:none}
+  .mega,.drop{position:static;transform:none;box-shadow:none;min-width:0;padding:.3rem 0 .5rem .9rem}
   .has-drop.open .mega{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
   .has-drop.open .drop{display:block}
   .mega-col a,.drop a{white-space:normal}
