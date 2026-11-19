@@ -499,3 +499,17 @@ section[id]{scroll-margin-top:92px}
 
 /* Micro-batch (prepared, not yet published): keep Plan/Enquire labels + arrows on one line */
 .pop-foot>span:last-child>*{white-space:nowrap;padding-left:.55rem;padding-right:.55rem;font-size:.82rem}
+
+/* Tablet-band repair (popup8 scroll check): collage photos must fit their box,
+   WhatsApp float leaves the whole <=1020 band, menu panel loses its dead space */
+@media(max-width:1020px){
+  .plan-collage{min-height:400px}
+  .collage-tall{height:400px}
+  .collage-round{width:46%}
+  .collage-round2{width:38%}
+  .wa-float{display:none}
+  #enquire{padding-top:2.4rem}
+}
+@media(min-width:761px) and (max-width:1020px){
+  .main-nav{padding-bottom:1.5rem}
+}
