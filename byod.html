@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BYOD — Build Your Own Destination | Elite Exposures Travel</title>
+<meta name="description" content="Build your own destination with Elite Exposures Travel: pick a place, choose your stay, and watch your personal day-wise plan come together. Price on enquiry — Bhavna quotes personally.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Montez&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=popup4">
+<style>
+  .byod-hero{background:linear-gradient(120deg,rgba(8,47,84,.88),rgba(13,110,160,.82)),url("https://images.unsplash.com/photo-1573843981267-be1999ff37cd?auto=format&fit=crop&w=1600") center/cover;color:#fff;padding:4.5rem 1.2rem 3.5rem;text-align:center}
+  .byod-hero h1{font-size:clamp(2.2rem,6vw,3.6rem);font-weight:800;margin:.4rem 0 .8rem}
+  .byod-hero p{max-width:640px;margin:0 auto;color:#dff2fc}
+  .byod-wrap{max-width:1100px;margin:0 auto;padding:2.5rem 1.2rem 4rem}
+  .byod-step{margin-bottom:2.8rem}
+  .byod-step h2{font-size:1.5rem;margin-bottom:.3rem}
+  .byod-step .step-sub{color:var(--muted);margin-bottom:1.1rem}
+  .step-badge{display:inline-block;background:var(--blue);color:#fff;font-weight:800;font-size:.75rem;border-radius:999px;padding:.2rem .7rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.5rem}
+  .region-title{font-size:.78rem;letter-spacing:.13em;text-transform:uppercase;color:var(--blue-dark);font-weight:800;margin:1.4rem 0 .7rem}
+  .pick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem}
+  .pick-card{border:2px solid var(--line);border-radius:16px;overflow:hidden;background:#fff;cursor:pointer;text-align:left;padding:0;font:inherit;transition:.2s;width:100%}
+  .pick-card:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(13,43,69,.12)}
+  .pick-card.selected{border-color:var(--blue);box-shadow:0 0 0 3px rgba(28,168,221,.25)}
+  .pick-card img{width:100%;height:130px;object-fit:cover;display:block}
+  .pick-grad{height:130px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;font-family:'Montez',cursive;font-size:1.7rem;padding:.8rem;text-align:center}
+  .pick-body{padding:.8rem 1rem}
+  .pick-body strong{display:block;color:var(--navy);font-size:1rem}
+  .pick-body small{color:var(--muted);font-size:.85rem;line-height:1.45;display:block;margin-top:.25rem}
+  .chip-row{display:flex;flex-wrap:wrap;gap:.55rem}
+  .chip-lg{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:.6rem 1.15rem;font:inherit;font-weight:700;color:var(--navy);cursor:pointer}
+  .chip-lg.selected{background:var(--blue);border-color:var(--blue);color:#fff}
+  .byod-detail{background:var(--tint);border-radius:14px;padding:1rem 1.2rem;margin-top:1rem;color:var(--muted);line-height:1.6}
+  .byod-detail strong{color:var(--navy)}
+  .byod-detail span{font-weight:700;color:var(--blue-dark)}
+  .plan-banner{border-radius:18px;overflow:hidden;margin-bottom:1.2rem}
+  .plan-banner img{width:100%;height:220px;object-fit:cover;display:block}
+  .byod-days{list-style:none;padding:0;margin:0 0 1.2rem;display:grid;gap:.8rem}
+  .byod-days li{background:#fff;border:1px solid var(--line);border-radius:14px;padding:1rem 1.2rem}
+  .byod-days strong{color:var(--navy);display:block;margin-bottom:.25rem}
+  .byod-days p{color:var(--muted);margin:0;line-height:1.55}
+  .byod-actions{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:1.2rem}
+  .nodata-box{background:#fff;border:2px dashed var(--line);border-radius:18px;padding:2rem;text-align:center}
+  .nodata-box p{color:var(--muted);max-width:520px;margin:.5rem auto 0}
+  .byod-nav{display:flex;gap:1.4rem;align-items:center;margin-left:auto}
+  @media(max-width:760px){.pick-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <span>✉️ <a href="mailto:bhavna@eliteexposures.in">bhavna@eliteexposures.in</a></span>
+    <span>📞 <a href="tel:+918860145084">+91 88601 45084</a></span>
+    <span class="topbar-right">📍 Gurugram, India</span>
+    <a class="topbar-ig" href="https://www.instagram.com/eliteexposurestravel" target="_blank" rel="noopener">Instagram ↗</a>
+  </div>
+</div>
+
+<header id="siteHeader">
+  <a class="brand" href="index.html" aria-label="Elite Exposures Travel home">
+    <img class="brand-logo" src="data:image/png;base64,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" alt="Elite Exposures Travel">
+  </a>
+  <nav class="byod-nav" aria-label="BYOD">
+    <a class="nav-link" href="index.html">Home</a>
+    <a class="nav-link" href="index.html#destinations">Destinations</a>
+    <a class="nav-link nav-byod" href="byod.html">BYOD</a>
+    <a class="btn btn-whatsapp" href="https://wa.me/918860145084?text=Hi%20Bhavna%2C%20I%20want%20to%20plan%20a%20trip." target="_blank" rel="noopener">WhatsApp</a>
+  </nav>
+</header>
+
+<main>
+  <section class="byod-hero">
+    <p class="script-accent light">BYOD — Build Your Own Destination</p>
+    <h1>Build Your Own Destination</h1>
+    <p>Pick a place, choose how you would love to stay, and watch a personal day-wise plan come together. No prices anywhere — Bhavna confirms and quotes every trip personally.</p>
+  </section>
+
+  <div class="byod-wrap">
+    <section class="byod-step" id="stepCountry">
+      <span class="step-badge">Step 1</span>
+      <h2>Where is your heart pointing?</h2>
+      <p class="step-sub">Choose a region and a destination. Places with full planner data open the big planner; everywhere else, Bhavna builds your plan personally.</p>
+      <div id="countryWrap"></div>
+    </section>
+
+    <section class="byod-step" id="stepArea" hidden>
+      <span class="step-badge">Step 2</span>
+      <h2>Which island area?</h2>
+      <p class="step-sub">Each area has its own airport route, transfer and flavour. Tap one — your stays update to match.</p>
+      <div class="pick-grid" id="areaGrid"></div>
+    </section>
+
+    <section class="byod-step" id="stepStyle" hidden>
+      <span class="step-badge">Step 3</span>
+      <h2>How do you love to stay?</h2>
+      <p class="step-sub">Your style helps Bhavna pitch the plan at exactly your pace and comfort.</p>
+      <div class="chip-row" id="styleRow"></div>
+    </section>
+
+    <section class="byod-step" id="stepStay" hidden>
+      <span class="step-badge">Step 4</span>
+      <h2>Choose your stay</h2>
+      <p class="step-sub">Real stays for the area you picked, with how you get there, signature experiences and typical inclusions.</p>
+      <div class="pick-grid" id="stayGrid"></div>
+      <div class="byod-detail" id="stayDetail" hidden></div>
+    </section>
+
+    <section class="byod-step" id="stepDays" hidden>
+      <span class="step-badge">Step 5</span>
+      <h2>How many days?</h2>
+      <p class="step-sub">Pick a length — your plan composes itself around it.</p>
+      <div class="chip-row" id="daysRow"></div>
+    </section>
+
+    <section class="byod-step" id="stepPlan" hidden>
+      <span class="step-badge">Your Plan</span>
+      <h2 id="planHead">Your sample plan</h2>
+      <p class="step-sub" id="planMetaLine"></p>
+      <div class="plan-banner"><img id="planBanner" src="" alt="Your destination"></div>
+      <ol class="byod-days" id="planList"></ol>
+      <p class="plan-note">This is a sample itinerary to help you picture your trip. Bhavna will confirm every detail in real time and personalise it to your dates, your people and your budget before you book.</p>
+      <p class="plan-price">Price on enquiry — Bhavna quotes personally.</p>
+      <div class="byod-actions">
+        <button class="btn btn-blue" id="planContact" type="button">Send to Bhavna — Contact Form →</button>
+        <a class="btn btn-whatsapp" id="planWhats" href="#" target="_blank" rel="noopener">Message on WhatsApp</a>
+        <a class="btn btn-outline" href="index.html">Back to Home</a>
+      </div>
+    </section>
+
+    <section class="byod-step" id="stepNoData" hidden>
+      <div class="nodata-box">
+        <p class="script-accent">Planned personally by Bhavna</p>
+        <h3 id="nodataTitle">This destination is coming to the planner soon</h3>
+        <p id="nodataText">Full planner data for this destination is on its way. Until then, Bhavna builds these trips personally — tell her your dates and she will design it end to end.</p>
+        <div class="byod-actions" style="justify-content:center">
+          <button class="btn btn-blue" id="nodataContact" type="button">Enquire for this destination →</button>
+          <a class="btn btn-whatsapp" id="nodataWhats" href="#" target="_blank" rel="noopener">Message on WhatsApp</a>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer id="contact">
+  <div class="footer-base" style="text-align:center">© Elite Exposures Travel · BYOD — Build Your Own Destination · Concept redesign demo by Northframe Studios</div>
+</footer>
+
+<script src="data.js?v=popup4"></script>
+<script src="byod.js?v=popup4"></script>
+</body>
+</html>
