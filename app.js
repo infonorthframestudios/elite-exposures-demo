@@ -506,7 +506,7 @@ if (matchMedia("(hover: hover) and (pointer: fine)").matches) {
   document.querySelectorAll(".has-drop").forEach(item => {
     let t = null;
     item.addEventListener("mouseenter", () => {
-      if (!matchMedia("(min-width: 1021px)").matches) return;
+      if (!matchMedia("(min-width: 901px)").matches) return;
       clearTimeout(t);
       item.classList.add("open");
       item.dataset.hoverOpen = "1";

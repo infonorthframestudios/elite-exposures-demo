@@ -429,7 +429,7 @@ img[data-plx-img]{will-change:transform}
 /* Batch #4 — below 1020px the nav collapses to the hamburger panel;
    dropdowns become expandable sections inside it (fix: this breakpoint
    previously lived at 760px while the Batch #4 blocks assumed 1020px) */
-@media(max-width:1020px){
+@media(max-width:900px){
   .main-nav{display:none;position:absolute;top:100%;left:0;right:0;background:#fff;flex-direction:column;padding:1rem 1.4rem;gap:1rem;box-shadow:0 20px 40px rgba(13,43,69,.12);margin-left:0;max-height:calc(100vh - 70px);overflow-y:auto}
   .main-nav.open{display:flex}
   .nav-toggle{display:block}
@@ -459,7 +459,7 @@ section[id]{scroll-margin-top:92px}
   .pop-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));overflow:visible}
   .pop-card{flex:none}
 }
-@media(max-width:1020px){
+@media(max-width:900px){
   .main-nav{padding:1rem 1.2rem 2.2rem;max-height:calc(100dvh - 128px);-webkit-overflow-scrolling:touch}
   .main-nav .nav-link{padding-right:.4rem}
 }
@@ -475,7 +475,7 @@ section[id]{scroll-margin-top:92px}
 
 /* Final fix-round block (Rashmi's phone test): one-flow scrolling mobile menu + bulletproof toggle font */
 .drop-btn{font-family:inherit}
-@media(max-width:1020px){
+@media(max-width:900px){
   .main-nav{padding:1rem 1.2rem 4rem;max-height:calc(100vh - 120px);max-height:calc(100dvh - 120px);overscroll-behavior:contain}
   .main-nav .nav-item{min-height:0;flex:none}
   .has-drop.open .mega{display:block;animation:dropIn .25s ease}
@@ -488,11 +488,13 @@ section[id]{scroll-margin-top:92px}
 @media(max-width:1020px){
   .plan-wrap,.enquire-wrap,.founder-card{grid-template-columns:1fr}
   .plan-collage{min-height:380px}
+}
+@media(max-width:900px){
   .searchbar{flex-wrap:wrap}
   .hs-field{flex:1 1 42%}
   .btn-search{flex:1 1 100%;padding:1rem}
 }
-@media(min-width:1021px) and (max-width:1180px){
+@media(min-width:901px) and (max-width:1180px){
   header{gap:.8rem}
   .main-nav{gap:1rem}
 }
@@ -510,7 +512,7 @@ section[id]{scroll-margin-top:92px}
   .wa-float{display:none}
   #enquire{padding-top:2.4rem}
 }
-@media(min-width:761px) and (max-width:1020px){
+@media(min-width:761px) and (max-width:900px){
   .main-nav{padding-bottom:1.5rem}
 }
 
@@ -519,8 +521,22 @@ section[id]{scroll-margin-top:92px}
    transform:none (0-1-0), shifting the expanded list -50% off the left edge.
    These higher-specificity resets make the mobile expansions plain stacked
    lists in the menu flow — no desktop panel geometry can leak in. */
-@media(max-width:1020px){
+@media(max-width:900px){
   .main-nav .mega,.main-nav .drop{position:static;left:auto;top:auto;transform:none;width:100%;max-width:none;min-width:0;grid-template-columns:none;box-shadow:none;border-radius:0;z-index:auto}
   .main-nav .has-drop.open .mega,.main-nav .has-drop.open .drop{transform:none}
   .main-nav .mega::before,.main-nav .drop::before{display:none}
+}
+
+/* Desktop-mode band (901-1020px, Rashmi's Brave "Desktop site" view): the full
+   desktop header + one-row search live here; stories stay single-column and
+   the category cards form a clean 2x2 grid instead of one squeezed row. */
+@media(max-width:1020px){
+  .story-grid{grid-template-columns:1fr}
+}
+@media(min-width:761px) and (max-width:1020px){
+  .cat-card{flex:0 0 calc(50% - .8rem);width:auto}
+  .cat-card img{width:100%;height:300px}
+}
+@media(min-width:901px) and (max-width:1020px){
+  .brand-logo{height:40px}
 }
