@@ -87,7 +87,7 @@ setTimeout(cfCenter, 300);
 // --- Recent Gallery (destination photos; tap to open the journey) ---
 withImg.slice(0, 8).forEach((d, i) => {
   const el = document.createElement("div");
-  el.className = "gallery-tile" + (i === 0 || i === 5 ? " tall" : "") + (i === 3 ? " wide" : "");
+  el.className = "gallery-tile";
   el.innerHTML = `<img src="${d.img.replace("w=1000", "w=700")}" alt="${d.name}" loading="lazy">`;
   el.addEventListener("click", () => openDest(d.id));
   gallery.appendChild(el);
@@ -487,6 +487,11 @@ function closeNavAndDrops() {
   navToggle.setAttribute("aria-expanded", "false");
   document.querySelectorAll(".has-drop").forEach(x => {
     x.classList.remove("open");
+    // Clear the hover-intent latch and its pending grace timer too, so a
+    // dismissal (pick / Escape / outside click) cannot be undone by a
+    // timer or latch that was set before it (Batch #5 hardening).
+    clearTimeout(x._ht);
+    delete x.dataset.hoverOpen;
     // Suppress hover re-open until the pointer leaves the item: without
     // this, choosing a country scrolled to the form while the CSS :hover
     // kept the panel floating over it (the pointer never left the header).
@@ -497,6 +502,9 @@ function closeNavAndDrops() {
 }
 document.querySelectorAll(".has-drop").forEach(item => {
   item.addEventListener("mouseleave", () => item.classList.remove("drop-suppress"));
+  // A fresh entry also clears it: a dismissal from an outside click (pointer
+  // already outside) must not leave the next deliberate hover dead.
+  item.addEventListener("mouseenter", () => item.classList.remove("drop-suppress"));
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeNavAndDrops(); });
 document.querySelectorAll(".drop-btn").forEach(btn => {
@@ -513,9 +521,7 @@ document.querySelectorAll(".drop-btn").forEach(btn => {
   });
 });
 document.addEventListener("click", e => {
-  if (!e.target.closest(".has-drop")) {
-    document.querySelectorAll(".has-drop.open").forEach(x => x.classList.remove("open"));
-  }
+  if (!e.target.closest(".has-drop")) closeNavAndDrops();
 });
 // Desktop hover intent: the mega-panel is centred on the page while its
 // button sits left of centre, so a diagonal pointer move toward the far
@@ -524,17 +530,16 @@ document.addEventListener("click", e => {
 // short grace period before closing, so the dropdown never traps a click.
 if (matchMedia("(hover: hover) and (pointer: fine)").matches) {
   document.querySelectorAll(".has-drop").forEach(item => {
-    let t = null;
     item.addEventListener("mouseenter", () => {
       if (!matchMedia("(min-width: 901px)").matches) return;
-      clearTimeout(t);
+      clearTimeout(item._ht);
       item.classList.add("open");
       item.dataset.hoverOpen = "1";
       item.querySelector(".drop-btn").setAttribute("aria-expanded", "true");
     });
     item.addEventListener("mouseleave", () => {
       if (!item.dataset.hoverOpen) return;
-      t = setTimeout(() => {
+      item._ht = setTimeout(() => {
         item.classList.remove("open");
         delete item.dataset.hoverOpen;
         item.querySelector(".drop-btn").setAttribute("aria-expanded", "false");
@@ -542,6 +547,18 @@ if (matchMedia("(hover: hover) and (pointer: fine)").matches) {
     });
   });
 }
+// Match the Special Tours panel height to the Destinations mega-panel
+// (Batch #5, Rashmi's side-by-side photo): both panels share the same top,
+// so flooring the drop at the mega's rendered height aligns their bottoms.
+function matchDropHeight() {
+  const mega = document.querySelector(".mega");
+  const drop = document.querySelector(".drop");
+  if (!mega || !drop) return;
+  drop.style.minHeight = matchMedia("(min-width: 901px)").matches ? mega.offsetHeight + "px" : "";
+}
+window.addEventListener("resize", matchDropHeight);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(matchDropHeight);
+matchDropHeight();
 // Destinations dropdown: places with content open their destination view
 document.querySelectorAll("[data-dest-id]").forEach(a => a.addEventListener("click", e => {
   e.preventDefault();
@@ -553,6 +570,13 @@ document.querySelectorAll("[data-dest-id]").forEach(a => a.addEventListener("cli
 document.querySelectorAll("[data-dest-name]").forEach(a => a.addEventListener("click", () => {
   document.getElementById("fDest").value = a.dataset.destName;
   closeNavAndDrops();
+}));
+// Offers (Batch #5): an offer's Enquire pre-picks its destination and notes the offer
+document.querySelectorAll(".offer-btn").forEach(b => b.addEventListener("click", () => {
+  document.getElementById("fDest").value = b.dataset.offerDest;
+  const msg = document.getElementById("fMsg");
+  if (msg && !msg.value) msg.value = "I'm interested in your " + b.dataset.offerTitle + " offer.";
+  document.getElementById("enquire").scrollIntoView({ behavior: "smooth" });
 }));
 // Stories: destination story cards from real destination content
 (function stories() {
