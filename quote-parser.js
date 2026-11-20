@@ -58,11 +58,14 @@
       if (b.type === "p") String(b.text).split("\n").forEach(l => lines.push(l));
       else if (b.type === "table") b.rows.forEach(r => r.forEach(c => String(c).split("\n").forEach(l => lines.push(l))));
     });
-    const text = fullText || lines.join("\n");
+    for (let i = 0; i < lines.length; i++) lines[i] = lines[i].replace(/[’‘]/g, "'");
+    const text = (fullText || lines.join("\n")).replace(/[’‘]/g, "'");
     const tables = (blocks || []).filter(b => b.type === "table");
 
     // ---- Destination ----
     let dest = null, destScore = 0;
+    const destLabel = text.match(/destination\s*[:\-]\s*([A-Za-z][A-Za-z ]{2,28})/i);
+    if (destLabel) { dest = titleCase(destLabel[1].trim()); destScore = 99; }
     const hay = text.toLowerCase();
     COUNTRIES.forEach(([name, keys]) => {
       let sc = 0;
@@ -74,7 +77,8 @@
 
     // ---- Travel date ----
     let dateISO = "", dateLabel = "";
-    const dm = text.match(/date of travel[:\s]*([0-9]{1,2})[\s\-\/]([A-Za-z]{3,9})[\s\-\/,]*([0-9]{4})/i)
+    const dm = text.match(/(?:date of travel|check\s*in|travel date)[:\s]*([0-9]{1,2})[\s\-\/]([A-Za-z]{3,9})[\s\-\/',]*([0-9]{2,4})/i)
+      || text.match(/date of travel[:\s]*([0-9]{1,2})[\s\-\/]([A-Za-z]{3,9})[\s\-\/,]*([0-9]{4})/i)
       || text.match(/travel date[:\s]*([0-9]{1,2})[\s\-\/]([A-Za-z]{3,9})[\s\-\/,]*([0-9]{4})/i)
       || text.match(/\b([0-9]{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+([0-9]{4})\b/i)
       || text.match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+([0-9]{1,2}),?\s+([0-9]{4})\b/i);
@@ -82,6 +86,7 @@
       let d, m, y;
       if (isNaN(dm[1])) { m = MONTHS[dm[1].slice(0, 3).toLowerCase()]; d = +dm[2]; y = +dm[3]; }
       else { d = +dm[1]; m = MONTHS[String(dm[2]).slice(0, 3).toLowerCase()]; y = +dm[3]; }
+      if (y && y < 100) y += 2000;
       if (d && m && y) {
         dateISO = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
         dateLabel = new Date(dateISO + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
@@ -99,7 +104,7 @@
     let childAges = "";
     if (children) {
       const ageM = paxLine.match(/\(([^)]*(?:\d+\s*(?:Y|yrs?|years?|y\/o))[^)]*)\)/i) || text.match(/kid[^(\n]*\((\d+)\s*Y\)/i);
-      if (ageM) childAges = ageM[1].replace(/\s+/g, " ").trim();
+      if (ageM) childAges = ageM[1].replace(/&/g, ",").replace(/,\s*,/g, ",").replace(/\s*,\s*/g, ", ").replace(/\s+/g, " ").trim();
     }
     if (adults) set("adults", adults, "ok"); else set("adults", "", "missing", "Adults not found");
     set("children", children, "ok");
@@ -142,12 +147,33 @@
         }
       }
     }
-    if (hotels.length) set("hotels", hotels, "ok");
+    // Family stay lines: "06 Jun'24 - 11 Jun'24 (5N) Hotel Name (Room Type)//Similar"
+    const familyHeads = [];
+    lines.forEach((l, i) => { const fm = l.match(/^\s*family\s*(\d+)/i); if (fm) familyHeads.push({ n: +fm[1], at: i }); });
+    if (!hotels.length) {
+      lines.forEach((l, i) => {
+        const hm = l.match(/\((\d{1,2})\s*N\)\s*([A-Za-z0-9][A-Za-z0-9&' .\-]{2,60}?)\s*\(([^)]+)\)/);
+        if (hm) {
+          let fam = null;
+          familyHeads.forEach(fh => { if (fh.at < i) fam = fh.n; });
+          hotels.push({
+            nights: +hm[1],
+            area: (dest || "") + (fam ? " (Family " + fam + ")" : ""),
+            name: titleCase(cleanLine(hm[2])),
+            room: titleCase(cleanLine(hm[3]))
+          });
+        }
+      });
+    }
+    if (familyHeads.length >= 2) set("families", familyHeads.length, "check",
+      "This document quotes " + familyHeads.length + " families separately, each with its own stay and cost — please review every family's lines");
+    if (hotels.length) set("hotels", hotels, familyHeads.length >= 2 ? "check" : "ok", familyHeads.length >= 2 ? "One row per family — check nights and dates per family" : "");
     else set("hotels", [], "missing", "No hotel rows found");
 
     // ---- Nights total ----
     const itinM = text.match(/(\d{1,2})\s*nights?\s*(\d{1,2})\s*days?/i);
-    const totalNights = hotels.reduce((s, h) => s + (+h.nights || 0), 0) || (itinM ? +itinM[1] : 0);
+    const nightsLabel = text.match(/no\.?\s*of\s*nights?[:\s]*(\d{1,2})/i);
+    const totalNights = (nightsLabel ? +nightsLabel[1] : 0) || hotels.reduce((s, h) => s + (+h.nights || 0), 0) || (itinM ? +itinM[1] : 0);
     if (totalNights) set("nights", totalNights, "ok");
     else set("nights", "", "missing", "Nights not found");
 
@@ -172,12 +198,41 @@
         }
       });
     });
+    // Multiple cost blocks (e.g. one total per family) -> itemised cost lines
+    const costLineHits = [];
+    {
+      let famCtx = "";
+      lines.forEach(l => {
+        const fm = l.match(/^\s*(family\s*\d+)/i);
+        if (fm) famCtx = titleCase(fm[1]);
+        const mm = l.match(moneyRe);
+        if (mm && /total cost|cost\s*:/i.test(l)) {
+          costLineHits.push({
+            label: famCtx || "Cost",
+            amount: parseFloat(mm[2].replace(/,/g, "")),
+            currency: CUR[(mm[1] || "USD").toUpperCase()] || "USD",
+            raw: cleanLine(l)
+          });
+        }
+      });
+    }
+    if (!cost && costLineHits.length >= 2) {
+      set("costLines", costLineHits.map(c => c.label + " — " + c.currency + " " + c.amount.toLocaleString("en-IN") + " (total, for all)"), "check",
+        "Separate cost blocks found — itemised here; nothing was merged");
+      cost = { amount: "", currency: costLineHits[0].currency, basis: costLineHits.length + " separate totals — see the cost breakdown" };
+      set("dmcCost", cost, "check", "This document has more than one cost block — use the itemised breakdown below");
+    } else if (costLineHits.length) {
+      set("costLines", costLineHits.map(c => c.label + " — " + c.currency + " " + c.amount.toLocaleString("en-IN")), "ok");
+    } else {
+      set("costLines", [], "ok");
+    }
     if (!cost) {
       const cm = text.match(/(?:per person|sharing|net|cost|price|total)[^\n]{0,60}?(USD|US\$|INR|Rs\.?|EUR|GBP|AED|SGD|LKR|[$₹€£])\s*([0-9][0-9,]*\.?[0-9]*)/i)
         || text.match(/(USD|US\$|INR|Rs\.?|EUR|GBP|AED|SGD|LKR|[$₹€£])\s*([0-9][0-9,]*\.?[0-9]*)\s*(?:per person|\/?\s*pp\b|sharing)/i);
       if (cm) cost = { amount: parseFloat(cm[2].replace(/,/g, "")), currency: CUR[(cm[1] || "USD").toUpperCase()] || "USD", basis: /per person/i.test(text.slice(Math.max(0, cm.index - 60), cm.index + 60)) ? "Per person" : "" };
     }
-    if (cost) set("dmcCost", cost, cost.basis ? "ok" : "check", cost.basis ? "" : "Basis (per person / total) unclear — please confirm");
+    if (F.dmcCost) { /* multi-block cost already recorded above */ }
+    else if (cost) set("dmcCost", cost, cost.basis ? "ok" : "check", cost.basis ? "" : "Basis (per person / total) unclear — please confirm");
     else set("dmcCost", { amount: "", currency: "USD", basis: "" }, "missing", "DMC cost not found");
 
     // ---- Itinerary ----
@@ -202,9 +257,10 @@
         }
       });
     }
-    days.sort((a, b) => a.day - b.day);
+    days.sort((a, b) => (a.day || 0) - (b.day || 0));
     if (days.length) set("itinerary", days, "ok");
     else set("itinerary", [], "missing", "No day-wise itinerary found");
+    // (Tours-from-inclusions fallback runs after inclusions are parsed, below.)
 
     // ---- Supplements ----
     const supps = [];
@@ -235,10 +291,10 @@
     // ---- Inclusions / Exclusions ----
     let inc = [], exc = [];
     tables.forEach(t => {
-      const headRow = t.rows.find(r => r.some(c => /includes/i.test(c)) && r.some(c => /excludes/i.test(c)));
+      const headRow = t.rows.find(r => r.some(c => /inclu/i.test(c)) && r.some(c => /exclu/i.test(c)));
       if (headRow) {
-        const incIdx = headRow.findIndex(c => /includes/i.test(c));
-        const excIdx = headRow.findIndex(c => /excludes/i.test(c));
+        const incIdx = headRow.findIndex(c => /inclu/i.test(c));
+        const excIdx = headRow.findIndex(c => /exclu/i.test(c));
         t.rows.forEach(r => {
           if (r === headRow) return;
           if (r.length < headRow.length) return; // spanning rows (e.g. cancellation) are not list items
@@ -250,14 +306,14 @@
     });
     let incStatus = "ok";
     if (!inc.length && !exc.length) { // line-based fallback
-      const hi = lines.findIndex(l => /includes/i.test(l));
-      const he = lines.findIndex(l => /excludes/i.test(l));
+      const hi = lines.findIndex(l => /inclu/i.test(l));
+      const he = lines.findIndex(l => /exclu/i.test(l));
       if (hi >= 0) {
         const end = he > hi ? he : Math.min(lines.length, hi + 14);
         for (let i = hi + 1; i < end; i++) if (cleanLine(lines[i])) inc.push(cleanLine(lines[i]));
       }
       if (he >= 0) for (let i = he + 1; i < Math.min(lines.length, he + 14); i++) {
-        if (/^(cancellation|kindly note|please note)/i.test(lines[i])) break;
+        if (/^(cancellation|kindly note|please note|terms)/i.test(lines[i])) break;
         if (cleanLine(lines[i])) exc.push(cleanLine(lines[i]));
       }
       incStatus = inc.length ? "check" : "missing";
@@ -272,6 +328,13 @@
     inc = [...new Set(inc)]; exc = [...new Set(exc)];
     set("inclusions", inc, inc.length ? incStatus : "missing", inc.length ? (incStatus === "check" ? "Split from the document by position — please verify" : "") : "Inclusions not found");
     set("exclusions", exc, exc.length ? (incStatus === "check" ? "check" : "ok") : "missing", exc.length ? "" : "Exclusions not found");
+
+    // Tours-from-inclusions fallback (no day-wise plan in the document)
+    if (!days.length && inc.length) {
+      const tours = inc.filter(x => /(tour|safari|studios|sentosa|zoo|island|flyer|gardens by|sightseeing|excursion|cruise)/i.test(x) && !/transfers/i.test(x));
+      if (tours.length) set("itinerary", tours.map(t => ({ day: null, text: t })), "check",
+        "No day-wise itinerary in the document — these tours were read from the Inclusions list; please arrange them by day");
+    }
 
     // ---- Cancellation policy ----
     const canc = [];
@@ -294,6 +357,11 @@
 
     // ---- DMC branding (white-label) ----
     const branding = [];
+    const greetM = text.match(/greetings from\s+([A-Za-z0-9][A-Za-z0-9&.' ]{1,38})/i);
+    if (greetM) {
+      const g = greetM[1].replace(/[!.,\s]+$/, "").trim();
+      if (g && !/elite/i.test(g)) branding.push("Company name: " + g);
+    }
     const emailM = text.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) || [];
     emailM.forEach(e => { if (!/eliteexposures/i.test(e)) branding.push("Email: " + e); });
     const urlM = text.match(/(?:www\.)[A-Za-z0-9.-]+\.[A-Za-z]{2,}|[A-Za-z0-9-]+\.(?:com|net|org|io|travel|tours|lk|in|co)\/[^\s)]*/gi) || [];

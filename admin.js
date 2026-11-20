@@ -313,7 +313,7 @@ function applyParsed(res, sourceText) {
   $("#qCategory").value = val("hotelCategory") || "";
   qHotelsState = Array.isArray(val("hotels")) ? val("hotels") : [];
   renderQHotels();
-  $("#qDays").value = (val("itinerary") || []).map(d => `Day ${d.day}: ${d.text}`).join("\n");
+  $("#qDays").value = (val("itinerary") || []).map(d => d.day ? `Day ${d.day}: ${d.text}` : d.text).join("\n");
   $("#qInc").value = (val("inclusions") || []).join("\n");
   $("#qExc").value = (val("exclusions") || []).join("\n");
   $("#qSupp").value = (val("supplements") || []).join("\n");
@@ -322,7 +322,8 @@ function applyParsed(res, sourceText) {
   $("#qCostAmt").value = cost.amount === "" || cost.amount == null ? "" : cost.amount;
   $("#qCostCur").value = cost.currency || "USD";
   $("#qCostBasis").value = cost.basis || "";
-  ["clientName", "clientPhone", "destination", "travelDate", "nights", "adults", "children", "childAges", "mealPlan", "hotelCategory", "itinerary", "inclusions", "exclusions", "supplements", "cancellation", "dmcCost"].forEach(k => {
+  $("#qCostLines").value = (val("costLines") || []).join("\n");
+  ["clientName", "clientPhone", "destination", "travelDate", "nights", "adults", "children", "childAges", "mealPlan", "hotelCategory", "itinerary", "inclusions", "exclusions", "supplements", "cancellation", "dmcCost", "costLines"].forEach(k => {
     if (F[k]) setFlag(k, F[k].status, F[k].note);
   });
   const counts = { ok: 0, check: 0, missing: 0 };
@@ -333,6 +334,7 @@ function applyParsed(res, sourceText) {
     (brand && brand.value && brand.value.length
       ? `⚠ <strong>DMC branding found:</strong> ${brand.value.map(esc).join("; ")} — it will <strong>not</strong> appear on the client PDF.`
       : `✓ No DMC branding found in this document — nothing to strip from the PDF.`) +
+    (F.families ? `<br>⚠ <strong>${esc(F.families.note)}</strong>` : "") +
     `<br><span class="sum-note">Review every field, fix anything highlighted, type your EET price, then Generate.</span>`;
   const src = $("#qSource");
   src.innerHTML = "";
