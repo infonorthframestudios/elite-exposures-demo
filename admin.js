@@ -395,19 +395,54 @@ async function getLogoDataURL() {
 
 // Themed PDF generation (jsPDF) — only form data goes in; DMC cost and any
 // DMC branding are never passed to the builder (white-label by construction).
-const QUOTE_THEMES = {
-  "Sri Lanka": { band: [27, 94, 63], accent: [201, 162, 39] },
-  "Maldives": { band: [10, 110, 145], accent: [217, 164, 65] },
-  "Thailand": { band: [86, 44, 128], accent: [217, 164, 65] },
-  "Bali": { band: [150, 66, 38], accent: [96, 140, 82] },
-  "Indonesia": { band: [150, 66, 38], accent: [96, 140, 82] },
-  "Dubai": { band: [13, 43, 69], accent: [201, 162, 39] },
-  "UAE": { band: [13, 43, 69], accent: [201, 162, 39] },
-  "Mauritius": { band: [10, 110, 145], accent: [230, 126, 34] },
-  "Vietnam": { band: [158, 42, 43], accent: [240, 190, 60] },
-  "Malaysia": { band: [20, 80, 120], accent: [240, 190, 60] },
-  "Singapore": { band: [178, 34, 52], accent: [240, 190, 60] }
+const COUNTRY_THEME = {
+  // dest -> { code: flagcdn ISO code, rgb: title underline colour }
+  "Singapore": { code: "sg", rgb: [239, 51, 64] },
+  "Sri Lanka": { code: "lk", rgb: [141, 21, 58] },
+  "Maldives": { code: "mv", rgb: [210, 16, 52] },
+  "Thailand": { code: "th", rgb: [45, 42, 74] },
+  "Indonesia": { code: "id", rgb: [231, 0, 17] },
+  "Bali": { code: "id", rgb: [231, 0, 17] },
+  "Dubai": { code: "ae", rgb: [0, 115, 47] },
+  "Abu Dhabi": { code: "ae", rgb: [0, 115, 47] },
+  "UAE": { code: "ae", rgb: [0, 115, 47] },
+  "Mauritius": { code: "mu", rgb: [26, 32, 109] },
+  "Vietnam": { code: "vn", rgb: [218, 37, 29] },
+  "Malaysia": { code: "my", rgb: [1, 0, 102] },
+  "Seychelles": { code: "sc", rgb: [0, 63, 135] },
+  "Azerbaijan": { code: "az", rgb: [0, 181, 226] }
 };
+function countryTheme(dest) {
+  if (COUNTRY_THEME[dest]) return COUNTRY_THEME[dest];
+  const k = Object.keys(COUNTRY_THEME).find(k => dest && dest.toLowerCase().includes(k.toLowerCase()));
+  return k ? COUNTRY_THEME[k] : { code: null, rgb: [13, 43, 69] };
+}
+const _flagCache = {};
+async function getFlagDataURL(dest) {
+  const { code } = countryTheme(dest);
+  if (!code) return null;
+  if (_flagCache[code]) return _flagCache[code];
+  try {
+    const res = await fetch("https://flagcdn.com/w160/" + code + ".png");
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    const url = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = reject;
+      r.readAsDataURL(blob);
+    });
+    const dims = await new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+      img.onerror = () => resolve(null);
+      img.src = url;
+    });
+    const out = dims ? { url, ratio: dims.h / dims.w } : null;
+    _flagCache[code] = out;
+    return out;
+  } catch (e) { return null; }
+}
 const CUR_SYM = { INR: "Rs. ", USD: "USD ", EUR: "EUR ", GBP: "GBP ", AED: "AED " };
 function quoteDataFromForm() {
   const lines = id => $(id).value.split("\n").map(s => s.trim()).filter(Boolean);
@@ -423,47 +458,11 @@ function quoteDataFromForm() {
   };
 }
 const PDF_NAVY = [13, 43, 69], PDF_GOLD = [217, 164, 65];
-function drawWatermark(doc, dest) {
-  // Big, very light country watermark behind the content: the country's name
-  // across the page plus a simple line illustration for known destinations.
-  // Pale colours are used directly (jsPDF's GState alpha does not apply to
-  // stroked shapes in this build, so colour does the fading).
-  const W = 210, H = 297;
-  doc.setTextColor(206, 222, 233);
-  doc.setFont("helvetica", "bold"); doc.setFontSize(54);
-  doc.text(String(dest || "Travel").toUpperCase(), W / 2, H / 2 + 34, { align: "center", angle: 24 });
-  doc.setDrawColor(196, 214, 227);
-  doc.setLineWidth(0.7);
-  const cx = W / 2, cy = 118;
-  if (/singapore/i.test(dest)) { // skyline
-    const hs = [26, 40, 32, 52, 36, 46, 28];
-    hs.forEach((h, i) => doc.rect(cx - 52 + i * 15, cy + 26 - h, 10, h, "S"));
-    doc.circle(cx + 34, cy - 34, 9, "S");
-  } else if (/sri lanka/i.test(dest)) { // lotus
-    doc.ellipse(cx, cy, 10, 24, "S");
-    doc.ellipse(cx - 19, cy + 7, 8, 17, "S");
-    doc.ellipse(cx + 19, cy + 7, 8, 17, "S");
-    doc.ellipse(cx, cy + 30, 32, 6, "S");
-  } else if (/maldives|mauritius|seychelles/i.test(dest)) { // waves
-    for (let r = 0; r < 3; r++) {
-      const pts = [];
-      for (let x = 0; x <= 20; x++) pts.push([5, (x % 2 === 0 ? -4 : 4) * (x === 0 || x === 20 ? 0 : 1)]);
-      doc.lines(pts, cx - 50, cy - 12 + r * 14, [1, 1], "S", false);
-    }
-    doc.circle(cx + 38, cy - 30, 10, "S");
-  } else if (/thailand/i.test(dest)) { // tiered temple roofs
-    doc.triangle(cx - 26, cy + 16, cx + 26, cy + 16, cx, cy - 12, "S");
-    doc.triangle(cx - 17, cy - 8, cx + 17, cy - 8, cx, cy - 28, "S");
-    doc.triangle(cx - 8, cy - 24, cx + 8, cy - 24, cx, cy - 38, "S");
-  } else { // rings
-    [16, 27, 38].forEach(r => doc.circle(cx, cy, r, "S"));
-  }
-}
-function buildQuotePDF(doc, d, logo) {
+function buildQuotePDF(doc, d, logo, flag) {
+  const theme = countryTheme(d.dest);
   const W = 210, M = 16, CW = W - 2 * M;
   let y = 0;
-  drawWatermark(doc, d.dest);
-  const newPageIf = need => { if (y + need > 280) { doc.addPage(); drawWatermark(doc, d.dest); y = 18; } };
+  const newPageIf = need => { if (y + need > 280) { doc.addPage(); y = 18; } };
   const h2 = t => {
     newPageIf(13);
     doc.setFont("helvetica", "bold"); doc.setFontSize(12.5); doc.setTextColor(PDF_NAVY[0], PDF_NAVY[1], PDF_NAVY[2]);
@@ -479,19 +478,30 @@ function buildQuotePDF(doc, d, logo) {
     doc.setFont("helvetica", "normal"); doc.setFontSize(size || 10);
     doc.splitTextToSize(t, CW).forEach(l => { newPageIf(6); doc.text(l, M, y); y += 5.6; });
   };
-  // Plain white header — logo + title, thin gold divider (theme lives in the watermark)
+  // Plain white header: logo left, country flag right, title underlined in the country's colour
+  const titleText = "Travel Quote — " + d.dest;
+  let titleX = M, titleY = 15;
   if (logo) {
     try { doc.addImage(logo, "PNG", M, 9, 51, 11.6); } catch (e) { /* fall through silently */ }
+    titleX = M + 58;
     doc.setTextColor(PDF_NAVY[0], PDF_NAVY[1], PDF_NAVY[2]); doc.setFont("helvetica", "bold"); doc.setFontSize(15);
-    doc.text("Travel Quote — " + d.dest, M + 58, 15);
+    doc.text(titleText, titleX, titleY);
     doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(110, 110, 110);
-    doc.text("Planned personally by Bhavna Sehrawat, Founder", M + 58, 21.5);
+    doc.text("Planned personally by Bhavna Sehrawat, Founder", titleX, 21.5);
   } else {
     doc.setTextColor(PDF_NAVY[0], PDF_NAVY[1], PDF_NAVY[2]); doc.setFont("helvetica", "bold"); doc.setFontSize(18);
     doc.text("Elite Exposures Travel", M, 14);
-    doc.setFontSize(12); doc.text("Travel Quote — " + d.dest, M, 21.5);
+    doc.setFontSize(12); titleY = 21.5;
+    doc.text(titleText, titleX, titleY);
   }
-  doc.setDrawColor(PDF_GOLD[0], PDF_GOLD[1], PDF_GOLD[2]); doc.setLineWidth(0.8); doc.line(M, 26, W - M, 26);
+  doc.setFont("helvetica", "bold");
+  const tw = doc.getTextWidth(titleText);
+  doc.setDrawColor(theme.rgb[0], theme.rgb[1], theme.rgb[2]); doc.setLineWidth(0.9);
+  doc.line(titleX, titleY + 2.2, titleX + tw, titleY + 2.2);
+  if (flag) {
+    const fw = 24, fh = Math.min(17, fw * (flag.ratio || 0.67));
+    try { doc.addImage(flag.url, "PNG", W - M - fw, 8, fw, fh); } catch (e) { /* flag optional */ }
+  }
   y = 36;
   // Meta
   doc.setTextColor(45, 45, 45);
@@ -593,11 +603,12 @@ async function generateQuotePDF() {
   try {
     await loadLib("jspdf");
     const logo = await getLogoDataURL();
+    const flag = await getFlagDataURL(d.dest);
     const doc = new window.jspdf.jsPDF({ unit: "mm", format: "a4" });
-    buildQuotePDF(doc, d, logo);
+    buildQuotePDF(doc, d, logo, flag);
     const fname = "Elite-Exposures-Quote-" + d.dest.replace(/[^A-Za-z]+/g, "-") + (d.client ? "-" + d.client.replace(/[^A-Za-z]+/g, "-") : "") + ".pdf";
     doc.save(fname);
-    $("#quoteStatus").textContent = "PDF downloaded ✓ — " + fname + (logo ? " (logo included)" : "");
+    $("#quoteStatus").textContent = "PDF downloaded ✓ — " + fname + (logo ? " (logo" + (flag ? " + flag" : "") + " included)" : "");
   } catch (e) {
     $("#quoteStatus").textContent = "The PDF library couldn't load — check the connection and try again.";
   }
@@ -606,7 +617,8 @@ async function generateQuotePDF() {
 // Built as a Word-native HTML document (opens in Word, LibreOffice and
 // Google Docs, fully editable) with the logo embedded.
 function hex(rgb) { return "#" + rgb.map(c => c.toString(16).padStart(2, "0")).join(""); }
-function buildQuoteDOC(d, logo) {
+function buildQuoteDOC(d, logo, flag) {
+  const uColor = "#" + countryTheme(d.dest).rgb.map(c => c.toString(16).padStart(2, "0")).join("");
   const band = "#0d2b45", accent = "#d9a441", tint = "#eef4f8"; // brand chrome on white; the country theme is the watermark
   const guests = [d.adults ? d.adults + " Adults" : "", d.children && +d.children ? d.children + " Children" + (d.childAges ? " (" + d.childAges + ")" : "") : ""].filter(Boolean).join(", ");
   const dateStr = d.date ? new Date(d.date + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) : "—";
@@ -623,7 +635,7 @@ function buildQuoteDOC(d, logo) {
 <title>Elite Exposures Travel — Quote — ${E(d.dest)}</title>
 <style>
 body{font-family:Calibri,Arial,sans-serif;color:#2d2d2d;font-size:11pt}
-.band{background:#ffffff;color:#0d2b45;padding:6px 0 14px;border-bottom:2.5px solid #d9a441}
+.band{background:#ffffff;color:#0d2b45;padding:6px 0 14px}
 .band .dest{font-size:16pt;font-weight:bold;color:#0d2b45}
 .band .sub{font-size:10pt;color:#6e6e6e}
 h2{color:${band};font-size:13pt;border-bottom:2.5px solid ${accent};padding-bottom:3px;margin:18px 0 8px}
@@ -639,9 +651,8 @@ ul{margin:6px 0 6px 18px;padding:0}
 .pricebox .pnote{font-size:9pt;color:#5a5a5a}
 .footer{border-top:1px solid #d5dee5;color:#787878;font-size:8.5pt;text-align:center;padding-top:8px;margin-top:24px}
 </style></head><body>
-<!--[if gte mso 9]><v:shape id="eeWatermark" type="#_x0000_t136" style="position:absolute;margin-left:0;margin-top:150pt;width:470pt;height:150pt;z-index:-1;mso-position-horizontal:center" fillcolor="#e9eff4" stroked="f"><v:textpath style="font-family:Calibri,Arial,sans-serif;font-size:58pt;font-weight:bold" string="${E(String(d.dest || "Travel").toUpperCase())}"/></v:shape><![endif]-->
 <table width="100%" cellspacing="0" cellpadding="0"><tr><td class="band">
-${logo ? `<table cellspacing="0" cellpadding="0"><tr><td><img src="${logo}" width="180"></td><td style="padding-left:16px"><div class="dest">Travel Quote — ${E(d.dest)}</div><div class="sub">Planned personally by Bhavna Sehrawat, Founder</div></td></tr></table>` : `<div class="dest">Elite Exposures Travel</div><div class="sub">Travel Quote — ${E(d.dest)} · Planned personally by Bhavna Sehrawat</div>`}
+<table cellspacing="0" cellpadding="0" width="100%"><tr><td>${logo ? `<img src="${logo}" width="180">` : `<span class="dest">Elite Exposures Travel</span>`}</td><td style="padding-left:16px"><div class="dest"><span style="border-bottom:3px solid ${uColor};padding-bottom:2px">Travel Quote — ${E(d.dest)}</span></div><div class="sub">Planned personally by Bhavna Sehrawat, Founder</div></td>${flag ? `<td align="right"><img src="${flag.url}" width="84"></td>` : ""}</tr></table>
 </td></tr></table>
 <table class="meta" cellspacing="0" cellpadding="0">
 <tr><td><strong>Prepared for:</strong></td><td>${E(d.client || "—")}</td><td><strong>Travel date:</strong></td><td>${E(dateStr)}</td></tr>
@@ -678,14 +689,15 @@ async function generateQuoteDOC() {
   if (!d) return;
   $("#quoteStatus").textContent = "Building your Word document…";
   const logo = await getLogoDataURL();
-  const html = buildQuoteDOC(d, logo);
+  const flag = await getFlagDataURL(d.dest);
+  const html = buildQuoteDOC(d, logo, flag);
   const blob = new Blob(["\ufeff", html], { type: "application/msword" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = "Elite-Exposures-Quote-" + d.dest.replace(/[^A-Za-z]+/g, "-") + (d.client ? "-" + d.client.replace(/[^A-Za-z]+/g, "-") : "") + ".doc";
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-  $("#quoteStatus").textContent = "Word document downloaded ✓ — " + a.download + (logo ? " (logo included)" : "");
+  $("#quoteStatus").textContent = "Word document downloaded ✓ — " + a.download + (logo ? " (logo" + (flag ? " + flag" : "") + " included)" : "");
 }
 $("#qGenerateDoc").addEventListener("click", generateQuoteDOC);
 $("#qGenerate").addEventListener("click", generateQuotePDF);
