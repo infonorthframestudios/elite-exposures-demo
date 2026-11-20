@@ -212,9 +212,13 @@
       const head = (t.rows[0] && t.rows[0].join(" ")) || "";
       if (/supplement/i.test(head)) {
         t.rows.slice(1).forEach(r => {
-          if (r.length >= 3 && cleanLine(r[1])) {
-            const area = cleanLine(r[0]), item = titleCase(cleanLine(r[1])), price = cleanLine(r[2]);
-            supps.push(`${item}${area ? " (" + titleCase(area) + ")" : ""} — ${price}`);
+          // Rows may lose their first (area) cell to a vertical merge in Word,
+          // so read item/price from the END of the row.
+          if (r.length >= 2 && cleanLine(r[r.length - 2]) && /(USD|INR|Rs\.?|EUR|GBP|AED|[$₹€£])/i.test(r[r.length - 1])) {
+            const price = cleanLine(r[r.length - 1]);
+            const item = titleCase(cleanLine(r[r.length - 2]));
+            const area = r.length >= 3 ? cleanLine(r[0]) : "";
+            if (item && !/supplement/i.test(item)) supps.push(`${item}${area ? " (" + titleCase(area) + ")" : ""} — ${price}`);
           }
         });
       }
