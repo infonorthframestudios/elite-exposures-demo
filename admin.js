@@ -372,6 +372,25 @@ $("#qPasteRead").addEventListener("click", () => {
   applyParsed(window.EEParseDMC(t.split("\n").map(l => ({ type: "p", text: l }))), t);
 });
 
+// The quote PDF carries the real Elite Exposures Travel logo. It is taken
+// from the sidebar logo image (already a data URI in the GitHub build, a
+// file in the Netlify master) and converted once, in-browser.
+let logoDataURL = null, logoTried = false;
+async function getLogoDataURL() {
+  if (logoTried) return logoDataURL;
+  logoTried = true;
+  const img = document.querySelector(".admin-brand img, img.brand-logo");
+  if (!img) return null;
+  const src = img.getAttribute("src") || "";
+  if (src.startsWith("data:")) { logoDataURL = src; return logoDataURL; }
+  try {
+    const r = await fetch(src);
+    const b = await r.blob();
+    logoDataURL = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => res(null); fr.readAsDataURL(b); });
+  } catch (e) { logoDataURL = null; }
+  return logoDataURL;
+}
+
 // Themed PDF generation (jsPDF) — only form data goes in; DMC cost and any
 // DMC branding are never passed to the builder (white-label by construction).
 const QUOTE_THEMES = {
@@ -401,7 +420,7 @@ function quoteDataFromForm() {
     eetAmt: +$("#qEetAmt").value || 0, eetCur: $("#qEetCur").value
   };
 }
-function buildQuotePDF(doc, d) {
+function buildQuotePDF(doc, d, logo) {
   const theme = QUOTE_THEMES[d.dest] || { band: [13, 43, 69], accent: [28, 168, 221] };
   const W = 210, M = 16, CW = W - 2 * M;
   let y = 0;
@@ -426,11 +445,20 @@ function buildQuotePDF(doc, d) {
   doc.setFillColor(theme.accent[0], theme.accent[1], theme.accent[2]); doc.rect(0, 34, W, 1.6, "F");
   doc.setDrawColor(theme.accent[0], theme.accent[1], theme.accent[2]); doc.setLineWidth(0.45);
   [3, 5.6, 8.2].forEach(r => doc.circle(196, 13, r, "S"));
-  doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.setFontSize(19);
-  doc.text("Elite Exposures Travel", M, 15);
-  doc.setFont("helvetica", "normal"); doc.setFontSize(11); doc.setTextColor(224, 238, 246);
-  doc.text("Travel Quote — " + d.dest, M, 24);
-  doc.setFontSize(9); doc.text("Planned personally by Bhavna Sehrawat", M, 30);
+  if (logo) {
+    doc.setFillColor(255, 255, 255); doc.roundedRect(M, 5.5, 56, 15.5, 2.5, 2.5, "F");
+    try { doc.addImage(logo, "PNG", M + 2.5, 7.4, 51, 11.6); } catch (e) { /* fall through silently */ }
+    doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.setFontSize(15);
+    doc.text("Travel Quote — " + d.dest, M + 64, 14.5);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(224, 238, 246);
+    doc.text("Planned personally by Bhavna Sehrawat, Founder", M + 64, 21.5);
+  } else {
+    doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.setFontSize(19);
+    doc.text("Elite Exposures Travel", M, 15);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(11); doc.setTextColor(224, 238, 246);
+    doc.text("Travel Quote — " + d.dest, M, 24);
+    doc.setFontSize(9); doc.text("Planned personally by Bhavna Sehrawat", M, 30);
+  }
   y = 46;
   // Meta
   doc.setTextColor(45, 45, 45);
@@ -531,11 +559,12 @@ async function generateQuotePDF() {
   $("#quoteStatus").textContent = "Building your PDF…";
   try {
     await loadLib("jspdf");
+    const logo = await getLogoDataURL();
     const doc = new window.jspdf.jsPDF({ unit: "mm", format: "a4" });
-    buildQuotePDF(doc, d);
+    buildQuotePDF(doc, d, logo);
     const fname = "Elite-Exposures-Quote-" + d.dest.replace(/[^A-Za-z]+/g, "-") + (d.client ? "-" + d.client.replace(/[^A-Za-z]+/g, "-") : "") + ".pdf";
     doc.save(fname);
-    $("#quoteStatus").textContent = "PDF downloaded ✓ — " + fname;
+    $("#quoteStatus").textContent = "PDF downloaded ✓ — " + fname + (logo ? " (logo included)" : "");
   } catch (e) {
     $("#quoteStatus").textContent = "The PDF library couldn't load — check the connection and try again.";
   }
