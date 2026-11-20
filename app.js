@@ -547,18 +547,7 @@ if (matchMedia("(hover: hover) and (pointer: fine)").matches) {
     });
   });
 }
-// Match the Special Tours panel height to the Destinations mega-panel
-// (Batch #5, Rashmi's side-by-side photo): both panels share the same top,
-// so flooring the drop at the mega's rendered height aligns their bottoms.
-function matchDropHeight() {
-  const mega = document.querySelector(".mega");
-  const drop = document.querySelector(".drop");
-  if (!mega || !drop) return;
-  drop.style.minHeight = matchMedia("(min-width: 901px)").matches ? mega.offsetHeight + "px" : "";
-}
-window.addEventListener("resize", matchDropHeight);
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(matchDropHeight);
-matchDropHeight();
+
 // Destinations dropdown: places with content open their destination view
 document.querySelectorAll("[data-dest-id]").forEach(a => a.addEventListener("click", e => {
   e.preventDefault();
