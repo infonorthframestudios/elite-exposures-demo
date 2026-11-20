@@ -148,3 +148,9 @@
 .view,.tool-cols,.tool-form,.preview-wrap,.table-scroll,.admin-stats,.tool-grid,.dash-hero{min-width:0}
 .admin-nav{min-width:0}
 .doc-preview .doc-lines li,.dash-sub{overflow-wrap:break-word}
+
+/* Worksheet readability: roomier table + spinner-free amount inputs */
+#wsTable{min-width:800px}
+#wsTable th:nth-child(6),#wsTable td:nth-child(6){min-width:132px}
+.admin-table input[type="number"]{-moz-appearance:textfield;appearance:textfield}
+.admin-table input[type="number"]::-webkit-inner-spin-button,.admin-table input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
