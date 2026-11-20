@@ -569,6 +569,93 @@ async function generateQuotePDF() {
     $("#quoteStatus").textContent = "The PDF library couldn't load — check the connection and try again.";
   }
 }
+// Word (.doc) generation — same content, branding and theme as the PDF.
+// Built as a Word-native HTML document (opens in Word, LibreOffice and
+// Google Docs, fully editable) with the logo embedded.
+function hex(rgb) { return "#" + rgb.map(c => c.toString(16).padStart(2, "0")).join(""); }
+function buildQuoteDOC(d, logo) {
+  const theme = QUOTE_THEMES[d.dest] || { band: [13, 43, 69], accent: [28, 168, 221] };
+  const band = hex(theme.band), accent = hex(theme.accent);
+  const tint = hex(theme.band.map(c => Math.round(c + (255 - c) * 0.88)));
+  const guests = [d.adults ? d.adults + " Adults" : "", d.children && +d.children ? d.children + " Children" + (d.childAges ? " (" + d.childAges + ")" : "") : ""].filter(Boolean).join(", ");
+  const dateStr = d.date ? new Date(d.date + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) : "—";
+  const E = esc;
+  const list = items => items.length ? `<ul>${items.map(i => `<li>${E(i)}</li>`).join("")}</ul>` : "";
+  const hotels = d.hotels.length ? `<h2>Your Hotels</h2><table class="hotels" cellspacing="0" cellpadding="6">
+    <tr class="hhead"><td>Nights</td><td>Area</td><td>Hotel</td><td>Room</td></tr>
+    ${d.hotels.map(h => `<tr><td>${E(String(h.nights || ""))}</td><td>${E(h.area)}</td><td>${E(h.name)}</td><td>${E(h.room)}</td></tr>`).join("")}</table>` : "";
+  const days = d.days.length ? `<h2>Day-wise Itinerary</h2>` + d.days.map(l => {
+    const m = l.match(/^(Day\s*\d+\s*:?)\s*(.*)$/i);
+    return m ? `<p class="day"><strong>${E(m[1].replace(/:$/, ""))}:</strong> ${E(m[2])}</p>` : `<p class="day">${E(l)}</p>`;
+  }).join("") : "";
+  return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8">
+<title>Elite Exposures Travel — Quote — ${E(d.dest)}</title>
+<style>
+body{font-family:Calibri,Arial,sans-serif;color:#2d2d2d;font-size:11pt}
+.band{background:${band};color:#ffffff;padding:18px 20px}
+.band .dest{font-size:16pt;font-weight:bold;color:#ffffff}
+.band .sub{font-size:10pt;color:#e0eef6}
+h2{color:${band};font-size:13pt;border-bottom:2.5px solid ${accent};padding-bottom:3px;margin:18px 0 8px}
+table.meta td{padding:2px 14px 2px 0;font-size:11pt}
+table.hotels{border-collapse:collapse;width:100%}
+table.hotels td{border:1px solid #d5dee5}
+table.hotels .hhead td{background:${band};color:#ffffff;font-weight:bold}
+.day{margin:4px 0}
+ul{margin:6px 0 6px 18px;padding:0}
+.pricebox{background:${tint};border:2px solid ${accent};padding:14px 18px;margin-top:20px}
+.pricebox .plabel{color:${band};font-weight:bold;font-size:11pt}
+.pricebox .pamt{font-size:20pt;font-weight:bold;color:#14283c}
+.pricebox .pnote{font-size:9pt;color:#5a5a5a}
+.footer{border-top:1px solid #d5dee5;color:#787878;font-size:8.5pt;text-align:center;padding-top:8px;margin-top:24px}
+</style></head><body>
+<table width="100%" cellspacing="0" cellpadding="0"><tr><td class="band">
+${logo ? `<table cellspacing="0" cellpadding="0"><tr><td style="background:#ffffff;padding:6px 10px"><img src="${logo}" width="180"></td><td style="padding-left:16px"><div class="dest">Travel Quote — ${E(d.dest)}</div><div class="sub">Planned personally by Bhavna Sehrawat, Founder</div></td></tr></table>` : `<div class="dest">Elite Exposures Travel</div><div class="sub">Travel Quote — ${E(d.dest)} · Planned personally by Bhavna Sehrawat</div>`}
+</td></tr></table>
+<table class="meta" cellspacing="0" cellpadding="0">
+<tr><td><strong>Prepared for:</strong></td><td>${E(d.client || "—")}</td><td><strong>Travel date:</strong></td><td>${E(dateStr)}</td></tr>
+<tr><td><strong>Phone:</strong></td><td>${E(d.phone || "—")}</td><td><strong>Guests:</strong></td><td>${E(guests || "—")}</td></tr>
+<tr><td></td><td></td><td><strong>Duration:</strong></td><td>${E(d.nights ? d.nights + " nights" : "—")}</td></tr>
+<tr><td></td><td></td><td><strong>Meal plan:</strong></td><td>${E(d.meal || "—")}</td></tr>
+<tr><td></td><td></td><td><strong>Hotel category:</strong></td><td>${E(d.category || "—")}</td></tr>
+</table>
+${hotels}
+${days}
+${d.inc.length ? `<h2>Inclusions</h2>${list(d.inc)}` : ""}
+${d.exc.length ? `<h2>Exclusions</h2>${list(d.exc)}` : ""}
+${d.supp.length ? `<h2>Optional Supplements</h2>${list(d.supp)}` : ""}
+${d.canc.length ? `<h2>Cancellation Policy</h2>${list(d.canc)}` : ""}
+<div class="pricebox"><div class="plabel">Your price for this trip</div>
+<div class="pamt">${E((CUR_SYM[d.eetCur] || (d.eetCur + " ")) + d.eetAmt.toLocaleString("en-IN"))}</div>
+<div class="pnote">Valid for 7 days from today. Every detail is confirmed personally by Bhavna before you book.</div></div>
+<p>To go ahead, just reply on WhatsApp — Bhavna will confirm availability and lock your trip.</p>
+<div class="footer">Elite Exposures Travel · 243, Tower B3, Spaze I Tech Park, Gurugram · bhavna@eliteexposures.in · WhatsApp +91 8860145084</div>
+</body></html>`;
+}
+function requireEET() {
+  const d = quoteDataFromForm();
+  if (!d.eetAmt) {
+    setFlag("eetPrice", "missing", "Type your EET price first");
+    $("#quoteStatus").textContent = "Please type your EET price first — it is the only price on the document.";
+    $("#qEetAmt").focus();
+    return null;
+  }
+  return d;
+}
+async function generateQuoteDOC() {
+  const d = requireEET();
+  if (!d) return;
+  $("#quoteStatus").textContent = "Building your Word document…";
+  const logo = await getLogoDataURL();
+  const html = buildQuoteDOC(d, logo);
+  const blob = new Blob(["\ufeff", html], { type: "application/msword" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "Elite-Exposures-Quote-" + d.dest.replace(/[^A-Za-z]+/g, "-") + (d.client ? "-" + d.client.replace(/[^A-Za-z]+/g, "-") : "") + ".doc";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  $("#quoteStatus").textContent = "Word document downloaded ✓ — " + a.download + (logo ? " (logo included)" : "");
+}
+$("#qGenerateDoc").addEventListener("click", generateQuoteDOC);
 $("#qGenerate").addEventListener("click", generateQuotePDF);
 $("#quoteSave").addEventListener("click", () => {
   const d = quoteDataFromForm();
