@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Montez&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css?v=admin1">
-<link rel="stylesheet" href="admin.css?v=admin5">
+<link rel="stylesheet" href="admin.css?v=quote2">
 </head>
 <body class="admin-page">
 <div class="admin-shell">
@@ -97,45 +97,76 @@
       <p class="save-status" id="storyStatus"></p>
     </section>
 
-    <!-- QUOTE BUILDER -->
+    <!-- QUOTE BUILDER (v2 — document reader, EET price, themed PDF) -->
     <section class="view" id="view-quote" hidden>
-      <div class="tool-cols">
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="qFile" accept=".docx,.pdf,.txt" hidden>
+        <p class="uz-title">📄 Drop the DMC document here, or <button type="button" class="uz-browse" id="qBrowse">click to browse</button></p>
+        <p class="uz-sub">Word (.docx) or PDF. The reader fills the form below for you — then you review every field before generating. The document is read inside this browser; it is never uploaded anywhere.</p>
+        <p class="uz-status" id="qReadStatus"></p>
+        <button type="button" class="uz-paste-toggle" id="qPasteToggle">…or paste the document text instead</button>
+        <div id="qPasteWrap" hidden>
+          <textarea id="qPasteText" rows="6" placeholder="Paste the full text of the DMC document here…"></textarea>
+          <button type="button" class="btn btn-blue" id="qPasteRead">Read pasted text</button>
+        </div>
+      </div>
+      <div class="read-summary" id="qSummary" hidden></div>
+      <div class="quote-cols">
         <form class="tool-form" id="quoteForm">
-          <h3>Quote details</h3>
-          <label>Client name <input id="qClient" type="text" value="Rohit Sharma"></label>
-          <label>Client phone <input id="qPhone" type="text" value="+91 98110 22334"></label>
-          <label>Destination <select id="qDest"></select></label>
+          <h3>Client</h3>
           <div class="form-2col">
-            <label>Travel date <input id="qDate" type="date" value="2027-02-14"></label>
-            <label>Nights <input id="qNights" type="number" min="1" value="5"></label>
+            <label class="fld" data-qfield="clientName">Client name <input id="qClient" type="text" placeholder="Type the client's name"></label>
+            <label class="fld" data-qfield="clientPhone">Client phone <input id="qPhone" type="text" placeholder="+91 …"></label>
+          </div>
+          <h3>Trip</h3>
+          <div class="form-2col">
+            <label class="fld" data-qfield="destination">Destination <input id="qDest" type="text" list="qDestList" placeholder="e.g. Sri Lanka"><datalist id="qDestList"></datalist></label>
+            <label class="fld" data-qfield="travelDate">Travel date <input id="qDate" type="date"></label>
           </div>
           <div class="form-2col">
-            <label>Adults <input id="qAdults" type="number" min="1" value="2"></label>
-            <label>Children <input id="qChildren" type="number" min="0" value="0"></label>
+            <label class="fld" data-qfield="nights">Nights <input id="qNights" type="number" min="0"></label>
+            <label class="fld" data-qfield="mealPlan">Meal plan <input id="qMeal" type="text" placeholder="e.g. Half Board (HB)"></label>
           </div>
-          <label>Day-wise plan (one line per day, optional)
-            <textarea id="qDays" rows="5">Day 1: Arrive in Malé, speedboat to the resort, evening at leisure
-Day 2: Snorkelling trip and dolphin cruise
-Day 3: Spa morning, sunset fishing
-Day 4: Free day at the resort
-Day 5: Breakfast and transfer back to Malé</textarea></label>
-          <h3>Your costing (private — never shown to the client)</h3>
           <div class="form-2col">
-            <label>DMC cost (₹) <input id="qCost" type="number" min="0" value="145000"></label>
-            <label>Commission % <input id="qPct" type="number" min="0" value="15"></label>
+            <label class="fld" data-qfield="adults">Adults <input id="qAdults" type="number" min="0"></label>
+            <label class="fld" data-qfield="children">Children <input id="qChildren" type="number" min="0"></label>
           </div>
-          <label>Final price override (₹, optional) <input id="qOverride" type="number" min="0" placeholder="Leave blank to auto-calculate"></label>
-          <p class="calc-line">Final price: <strong id="qFinal">₹0</strong></p>
+          <div class="form-2col">
+            <label class="fld" data-qfield="childAges">Child ages <input id="qChildAges" type="text" placeholder="e.g. 4Y"></label>
+            <label class="fld" data-qfield="hotelCategory">Hotel category <input id="qCategory" type="text" placeholder="e.g. 4 Star"></label>
+          </div>
+          <h3>Hotels</h3>
+          <div id="qHotels" class="editor-list"></div>
+          <button class="btn btn-soft" id="qHotelAdd" type="button">+ Add hotel</button>
+          <h3>Day-wise itinerary</h3>
+          <label class="fld" data-qfield="itinerary">Itinerary (one line per day)<textarea id="qDays" rows="7" placeholder="Day 1: …"></textarea></label>
+          <h3>What's included</h3>
+          <label class="fld" data-qfield="inclusions">Inclusions (one per line)<textarea id="qInc" rows="5"></textarea></label>
+          <label class="fld" data-qfield="exclusions">Exclusions (one per line)<textarea id="qExc" rows="4"></textarea></label>
+          <label class="fld" data-qfield="supplements">Supplements / extras (one per line)<textarea id="qSupp" rows="3"></textarea></label>
+          <label class="fld" data-qfield="cancellation">Cancellation policy (one per line, optional)<textarea id="qCanc" rows="3"></textarea></label>
+          <h3>Your costing (private — never on the client PDF)</h3>
+          <div class="form-2col">
+            <label class="fld" data-qfield="dmcCost">DMC cost
+              <span class="cost-row"><input id="qCostAmt" type="number" min="0" placeholder="Amount">
+              <select id="qCostCur"><option>USD</option><option>INR</option><option>EUR</option><option>GBP</option><option>AED</option><option>SGD</option><option>LKR</option></select></span></label>
+            <label>Basis <input id="qCostBasis" type="text" placeholder="e.g. Per person sharing double"></label>
+          </div>
+          <div class="eet-box">
+            <label class="fld" data-qfield="eetPrice">Your EET price — the only price on the client PDF
+              <span class="cost-row"><input id="qEetAmt" type="number" min="0" placeholder="Type your final price">
+              <select id="qEetCur"><option>INR</option><option>USD</option><option>EUR</option><option>GBP</option><option>AED</option></select></span></label>
+          </div>
           <div class="view-actions">
-            <button class="btn btn-soft" id="quotePrint" type="button">Print / Save PDF</button>
-            <button class="btn btn-blue" id="quoteSave" type="button">Save quote</button>
+            <button class="btn btn-blue btn-generate" id="qGenerate" type="button">Generate Quote PDF ↓</button>
+            <button class="btn btn-soft" id="quoteSave" type="button">Save quote</button>
           </div>
           <p class="save-status" id="quoteStatus"></p>
           <div id="quoteSaved" class="saved-list"></div>
         </form>
-        <div class="preview-wrap">
-          <p class="preview-label">Client preview — only the final price appears</p>
-          <div class="doc-preview print-area" id="quotePreview"></div>
+        <div class="preview-wrap source-wrap">
+          <p class="preview-label">Source document — check fields against the original</p>
+          <div class="source-panel" id="qSource"><p class="source-empty">Upload a DMC document and its text will appear here, so you can verify every auto-filled field while you review.</p></div>
         </div>
       </div>
     </section>
@@ -240,6 +271,7 @@ Day 5: Breakfast and transfer back to Malé</textarea></label>
   </main>
 </div>
 <script src="data.js?v=admin1"></script>
-<script src="admin.js?v=admin3"></script>
+<script src="quote-parser.js?v=quote2"></script>
+<script src="admin.js?v=quote2"></script>
 </body>
 </html>

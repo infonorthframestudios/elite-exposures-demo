@@ -180,38 +180,372 @@ $("#storyAdd").addEventListener("click", () => { storiesState.push({ id: "custom
 editorSave("#storySave", "#storyStatus", "ee_stories", () => storiesState, "stories");
 $("#storyReset").addEventListener("click", () => { storiesState = JSON.parse(JSON.stringify(SEED_STORIES)); renderStories(); });
 
-// ---------- Quote Builder ----------
+// ---------- Quote Builder v2 (document reader + EET price + themed PDF) ----------
 function fillDestSelect(sel, current) {
   sel.innerHTML = DEST_NAMES.map(n => `<option ${n === current ? "selected" : ""}>${n}</option>`).join("");
 }
-fillDestSelect($("#qDest"), "Maldives");
 fillDestSelect($("#iDest"), "Maldives");
 fillDestSelect($("#leadDest"), "Maldives");
+$("#qDestList").innerHTML = DEST_NAMES.map(n => `<option value="${n}">`).join("");
 
-function quoteFinal() {
-  const cost = +$("#qCost").value || 0, pct = +$("#qPct").value || 0, over = +$("#qOverride").value || 0;
-  return over > 0 ? over : Math.round(cost * (1 + pct / 100));
+const CDN_LIBS = {
+  mammoth: "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js",
+  pdfjs: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
+  jspdf: "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+};
+const libPromises = {};
+function loadLib(name) {
+  if (!libPromises[name]) libPromises[name] = new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = CDN_LIBS[name]; s.onload = res; s.onerror = () => rej(new Error(name));
+    document.head.appendChild(s);
+  });
+  return libPromises[name];
 }
-function renderQuote() {
-  const final = quoteFinal();
-  $("#qFinal").textContent = fmt(final);
-  const days = $("#qDays").value.split("\n").map(s => s.trim()).filter(Boolean);
-  const dateStr = $("#qDate").value ? new Date($("#qDate").value + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) : "";
-  $("#quotePreview").innerHTML = `
-    <p class="doc-script">Elite Exposures Travel</p>
-    <h3>Travel Quote — ${esc($("#qDest").value)}</h3>
-    <p class="doc-meta">Prepared for <strong>${esc($("#qClient").value)}</strong>${$("#qPhone").value ? " · " + esc($("#qPhone").value) : ""}<br>
-    Travel date: ${dateStr} · ${$("#qNights").value} nights · ${$("#qAdults").value} adults${+$("#qChildren").value ? " · " + $("#qChildren").value + " children" : ""}</p>
-    ${days.length ? `<ul class="doc-lines">${days.map(d => `<li>${esc(d)}</li>`).join("")}</ul>` : ""}
-    <div class="doc-total"><span>Total payable</span><strong>${fmt(final)}</strong></div>
-    <p class="doc-foot">This quote is valid for 7 days. Every detail is confirmed personally by Bhavna before you book.<br>
-    Elite Exposures Travel · bhavna@eliteexposures.in · WhatsApp +91 8860145084</p>`;
+
+// Hotel rows
+let qHotelsState = [];
+function renderQHotels() {
+  $("#qHotels").innerHTML = qHotelsState.length ? qHotelsState.map((h, i) => `
+    <div class="hotel-row">
+      <label>Nights <input data-hk="nights" data-i="${i}" type="number" min="0" value="${h.nights ?? ""}"></label>
+      <label>Area <input data-hk="area" data-i="${i}" value="${esc(h.area)}"></label>
+      <label>Hotel <input data-hk="name" data-i="${i}" value="${esc(h.name)}"></label>
+      <label>Room type <input data-hk="room" data-i="${i}" value="${esc(h.room)}"></label>
+      <button class="btn-danger" data-hdel="${i}" type="button">Remove</button>
+    </div>`).join("") : '<p class="source-empty">No hotels yet — upload a DMC document or add one below.</p>';
+  $$("#qHotels [data-hk]").forEach(inp => inp.addEventListener("input", () => {
+    const i = +inp.dataset.i;
+    qHotelsState[i][inp.dataset.hk] = inp.dataset.hk === "nights" ? +inp.value || 0 : inp.value;
+  }));
+  $$("#qHotels [data-hdel]").forEach(b => b.addEventListener("click", () => { qHotelsState.splice(+b.dataset.hdel, 1); renderQHotels(); }));
 }
-$("#quoteForm").addEventListener("input", renderQuote);
-$("#quotePrint").addEventListener("click", () => window.print());
+$("#qHotelAdd").addEventListener("click", () => { qHotelsState.push({ nights: 1, area: "", name: "", room: "" }); renderQHotels(); });
+
+// Field flags (human review: "AI fills, human confirms")
+function setFlag(field, status, note) {
+  const wrap = document.querySelector(`[data-qfield="${field}"]`);
+  if (!wrap) return;
+  wrap.classList.remove("flag-check", "flag-missing");
+  const old = wrap.querySelector(".flag-chip"); if (old) old.remove();
+  if (!status || status === "ok") return;
+  wrap.classList.add(status === "check" ? "flag-check" : "flag-missing");
+  const chip = document.createElement("span");
+  chip.className = "flag-chip";
+  chip.textContent = status === "check" ? "Please check" : "Needs your input";
+  if (note) chip.title = note;
+  wrap.appendChild(chip);
+}
+$$("#quoteForm [data-qfield]").forEach(w => w.addEventListener("input", () => {
+  w.classList.remove("flag-check", "flag-missing");
+  const c = w.querySelector(".flag-chip"); if (c) c.remove();
+}));
+
+// Document readers (all in-browser; the file never leaves the device)
+async function readDocx(file) {
+  await loadLib("mammoth");
+  const buf = await file.arrayBuffer();
+  const result = await window.mammoth.convertToHtml({ arrayBuffer: buf });
+  const doc = new DOMParser().parseFromString(result.value, "text/html");
+  const blocks = [];
+  (function walk(node) {
+    node.childNodes.forEach(ch => {
+      if (ch.nodeType !== 1) return;
+      const tag = ch.tagName;
+      if (tag === "TABLE") {
+        const rows = [];
+        ch.querySelectorAll("tr").forEach(tr => {
+          const cells = [];
+          tr.querySelectorAll("td,th").forEach(td => {
+            const ps = [...td.querySelectorAll("p")].map(x => x.textContent.trim()).filter(Boolean);
+            cells.push(ps.length ? ps.join("\n") : td.textContent.trim());
+          });
+          rows.push(cells);
+        });
+        blocks.push({ type: "table", rows });
+      } else if (["P", "H1", "H2", "H3", "H4", "H5", "H6", "LI"].includes(tag)) {
+        const t = ch.textContent.trim();
+        if (t) blocks.push({ type: "p", text: t });
+      } else walk(ch);
+    });
+  })(doc.body);
+  return blocks;
+}
+async function readPdf(file) {
+  await loadLib("pdfjs");
+  const pdfjs = window.pdfjsLib;
+  pdfjs.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjs.getDocument({ data: buf }).promise;
+  const blocks = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const tc = await page.getTextContent();
+    const byY = {};
+    tc.items.forEach(it => {
+      const y = Math.round(it.transform[5]);
+      (byY[y] = byY[y] || []).push(it.str);
+    });
+    Object.keys(byY).sort((a, b) => b - a).forEach(y => {
+      const line = byY[y].join(" ").replace(/\s+/g, " ").trim();
+      if (line) blocks.push({ type: "p", text: line });
+    });
+  }
+  return blocks;
+}
+function blocksToText(blocks) {
+  return blocks.map(b => b.type === "p" ? b.text :
+    b.rows.map(r => r.map(c => c.replace(/\n/g, " ")).join("  |  ")).join("\n")).join("\n");
+}
+
+function applyParsed(res, sourceText) {
+  const F = res.fields;
+  const val = k => (F[k] ? F[k].value : "");
+  $("#qClient").value = val("clientName") || "";
+  $("#qPhone").value = val("clientPhone") || "";
+  $("#qDest").value = val("destination") || "";
+  $("#qDate").value = val("travelDate") || "";
+  $("#qNights").value = val("nights") === "" ? "" : val("nights");
+  $("#qAdults").value = val("adults") === "" ? "" : val("adults");
+  $("#qChildren").value = val("children") === "" ? "" : val("children");
+  $("#qChildAges").value = val("childAges") || "";
+  $("#qMeal").value = val("mealPlan") || "";
+  $("#qCategory").value = val("hotelCategory") || "";
+  qHotelsState = Array.isArray(val("hotels")) ? val("hotels") : [];
+  renderQHotels();
+  $("#qDays").value = (val("itinerary") || []).map(d => `Day ${d.day}: ${d.text}`).join("\n");
+  $("#qInc").value = (val("inclusions") || []).join("\n");
+  $("#qExc").value = (val("exclusions") || []).join("\n");
+  $("#qSupp").value = (val("supplements") || []).join("\n");
+  $("#qCanc").value = (val("cancellation") || []).join("\n");
+  const cost = val("dmcCost") || {};
+  $("#qCostAmt").value = cost.amount === "" || cost.amount == null ? "" : cost.amount;
+  $("#qCostCur").value = cost.currency || "USD";
+  $("#qCostBasis").value = cost.basis || "";
+  ["clientName", "clientPhone", "destination", "travelDate", "nights", "adults", "children", "childAges", "mealPlan", "hotelCategory", "itinerary", "inclusions", "exclusions", "supplements", "cancellation", "dmcCost"].forEach(k => {
+    if (F[k]) setFlag(k, F[k].status, F[k].note);
+  });
+  const counts = { ok: 0, check: 0, missing: 0 };
+  Object.values(F).forEach(f => { counts[f.status] = (counts[f.status] || 0) + 1; });
+  const brand = F.dmcBranding;
+  $("#qSummary").hidden = false;
+  $("#qSummary").innerHTML = `<strong>Document read.</strong> ${counts.ok} fields filled · ${counts.check} to check · ${counts.missing} blank.<br>` +
+    (brand && brand.value && brand.value.length
+      ? `⚠ <strong>DMC branding found:</strong> ${brand.value.map(esc).join("; ")} — it will <strong>not</strong> appear on the client PDF.`
+      : `✓ No DMC branding found in this document — nothing to strip from the PDF.`) +
+    `<br><span class="sum-note">Review every field, fix anything highlighted, type your EET price, then Generate.</span>`;
+  const src = $("#qSource");
+  src.innerHTML = "";
+  const pre = document.createElement("pre");
+  pre.className = "source-text";
+  pre.textContent = sourceText;
+  src.appendChild(pre);
+  $("#qReadStatus").textContent = "Read complete — the form below is filled. Please review every field.";
+}
+
+const zone = $("#uploadZone"), fileInput = $("#qFile");
+$("#qBrowse").addEventListener("click", () => fileInput.click());
+["dragover", "dragenter"].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); zone.classList.add("drag"); }));
+["dragleave", "drop"].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); zone.classList.remove("drag"); }));
+zone.addEventListener("drop", e => { const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) handleFile(f); });
+fileInput.addEventListener("change", () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+async function handleFile(file) {
+  $("#qReadStatus").textContent = "Reading " + file.name + "…";
+  try {
+    const name = file.name.toLowerCase();
+    let blocks;
+    if (name.endsWith(".docx")) blocks = await readDocx(file);
+    else if (name.endsWith(".pdf")) blocks = await readPdf(file);
+    else if (name.endsWith(".txt")) blocks = (await file.text()).split("\n").map(l => ({ type: "p", text: l }));
+    else throw new Error("type");
+    applyParsed(window.EEParseDMC(blocks), blocksToText(blocks));
+  } catch (err) {
+    $("#qReadStatus").textContent = err.message === "type"
+      ? "That file type isn't supported — please use a Word (.docx), PDF or .txt document."
+      : "Couldn't read that file — the reader library may not have loaded (check the connection), or you can paste the document text instead.";
+  }
+}
+$("#qPasteToggle").addEventListener("click", () => { const w = $("#qPasteWrap"); w.hidden = !w.hidden; });
+$("#qPasteRead").addEventListener("click", () => {
+  const t = $("#qPasteText").value;
+  if (!t.trim()) return;
+  applyParsed(window.EEParseDMC(t.split("\n").map(l => ({ type: "p", text: l }))), t);
+});
+
+// Themed PDF generation (jsPDF) — only form data goes in; DMC cost and any
+// DMC branding are never passed to the builder (white-label by construction).
+const QUOTE_THEMES = {
+  "Sri Lanka": { band: [27, 94, 63], accent: [201, 162, 39] },
+  "Maldives": { band: [10, 110, 145], accent: [217, 164, 65] },
+  "Thailand": { band: [86, 44, 128], accent: [217, 164, 65] },
+  "Bali": { band: [150, 66, 38], accent: [96, 140, 82] },
+  "Indonesia": { band: [150, 66, 38], accent: [96, 140, 82] },
+  "Dubai": { band: [13, 43, 69], accent: [201, 162, 39] },
+  "UAE": { band: [13, 43, 69], accent: [201, 162, 39] },
+  "Mauritius": { band: [10, 110, 145], accent: [230, 126, 34] },
+  "Vietnam": { band: [158, 42, 43], accent: [240, 190, 60] },
+  "Malaysia": { band: [20, 80, 120], accent: [240, 190, 60] },
+  "Singapore": { band: [178, 34, 52], accent: [240, 190, 60] }
+};
+const CUR_SYM = { INR: "Rs. ", USD: "USD ", EUR: "EUR ", GBP: "GBP ", AED: "AED " };
+function quoteDataFromForm() {
+  const lines = id => $(id).value.split("\n").map(s => s.trim()).filter(Boolean);
+  return {
+    client: $("#qClient").value.trim(), phone: $("#qPhone").value.trim(),
+    dest: $("#qDest").value.trim() || "Your Trip",
+    date: $("#qDate").value, nights: $("#qNights").value,
+    adults: $("#qAdults").value, children: $("#qChildren").value, childAges: $("#qChildAges").value.trim(),
+    meal: $("#qMeal").value.trim(), category: $("#qCategory").value.trim(),
+    hotels: qHotelsState.filter(h => h.name || h.area),
+    days: lines("#qDays"), inc: lines("#qInc"), exc: lines("#qExc"), supp: lines("#qSupp"), canc: lines("#qCanc"),
+    eetAmt: +$("#qEetAmt").value || 0, eetCur: $("#qEetCur").value
+  };
+}
+function buildQuotePDF(doc, d) {
+  const theme = QUOTE_THEMES[d.dest] || { band: [13, 43, 69], accent: [28, 168, 221] };
+  const W = 210, M = 16, CW = W - 2 * M;
+  let y = 0;
+  const newPageIf = need => { if (y + need > 280) { doc.addPage(); y = 18; } };
+  const h2 = t => {
+    newPageIf(13);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(12.5); doc.setTextColor(theme.band[0], theme.band[1], theme.band[2]);
+    doc.text(t, M, y); y += 2.2;
+    doc.setDrawColor(theme.accent[0], theme.accent[1], theme.accent[2]); doc.setLineWidth(0.7); doc.line(M, y, M + 22, y); y += 6;
+    doc.setTextColor(45, 45, 45);
+  };
+  const bullet = t => {
+    doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+    doc.splitTextToSize(t, CW - 5).forEach((l, i) => { newPageIf(6); doc.text(i === 0 ? "•  " + l : "     " + l, M, y); y += 5.6; });
+  };
+  const para = (t, size) => {
+    doc.setFont("helvetica", "normal"); doc.setFontSize(size || 10);
+    doc.splitTextToSize(t, CW).forEach(l => { newPageIf(6); doc.text(l, M, y); y += 5.6; });
+  };
+  // Header band
+  doc.setFillColor(theme.band[0], theme.band[1], theme.band[2]); doc.rect(0, 0, W, 34, "F");
+  doc.setFillColor(theme.accent[0], theme.accent[1], theme.accent[2]); doc.rect(0, 34, W, 1.6, "F");
+  doc.setDrawColor(theme.accent[0], theme.accent[1], theme.accent[2]); doc.setLineWidth(0.45);
+  [3, 5.6, 8.2].forEach(r => doc.circle(196, 13, r, "S"));
+  doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.setFontSize(19);
+  doc.text("Elite Exposures Travel", M, 15);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(11); doc.setTextColor(224, 238, 246);
+  doc.text("Travel Quote — " + d.dest, M, 24);
+  doc.setFontSize(9); doc.text("Planned personally by Bhavna Sehrawat", M, 30);
+  y = 46;
+  // Meta
+  doc.setTextColor(45, 45, 45);
+  const guests = [d.adults ? d.adults + " Adults" : "", d.children && +d.children ? d.children + " Children" + (d.childAges ? " (" + d.childAges + ")" : "") : ""].filter(Boolean).join(", ");
+  const dateStr = d.date ? new Date(d.date + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) : "";
+  const metaL = [["Prepared for", d.client || "—"], ["Phone", d.phone || "—"]];
+  const metaR = [["Travel date", dateStr || "—"], ["Guests", guests || "—"], ["Duration", d.nights ? d.nights + " nights" : "—"], ["Meal plan", d.meal || "—"], ["Hotel category", d.category || "—"]];
+  doc.setFontSize(10);
+  metaL.forEach(([k, v], i) => {
+    doc.setFont("helvetica", "bold"); doc.text(k + ":", M, y + i * 6);
+    doc.setFont("helvetica", "normal"); doc.text(v, M + 30, y + i * 6);
+  });
+  metaR.forEach(([k, v], i) => {
+    doc.setFont("helvetica", "bold"); doc.text(k + ":", M + 96, y + i * 6);
+    doc.setFont("helvetica", "normal"); doc.text(v, M + 122, y + i * 6);
+  });
+  y += Math.max(metaL.length, metaR.length) * 6 + 6;
+  // Hotels table
+  if (d.hotels.length) {
+    h2("Your Hotels");
+    const cols = [M, M + 18, M + 56, M + 128]; // Nights | Area | Hotel | Room
+    const heads = ["Nights", "Area", "Hotel", "Room"];
+    newPageIf(10);
+    doc.setFillColor(theme.band[0], theme.band[1], theme.band[2]); doc.rect(M, y - 4.6, CW, 8, "F");
+    doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+    heads.forEach((h, i) => doc.text(h, cols[i] + 1.5, y + 1)); y += 8.5;
+    doc.setTextColor(45, 45, 45);
+    d.hotels.forEach((h, ri) => {
+      const cells = [String(h.nights || ""), h.area || "", h.name || "", h.room || ""];
+      const widths = [16, 36, 70, 48];
+      const lineSets = cells.map((c, i) => doc.splitTextToSize(c, widths[i]));
+      const rowH = Math.max(...lineSets.map(ls => ls.length)) * 5.2 + 2.6;
+      newPageIf(rowH + 2);
+      if (ri % 2 === 0) { doc.setFillColor(245, 249, 251); doc.rect(M, y - 4.2, CW, rowH, "F"); }
+      doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+      lineSets.forEach((ls, i) => ls.forEach((l, li) => doc.text(l, cols[i] + 1.5, y + li * 5.2)));
+      y += rowH;
+    });
+    y += 5;
+  }
+  // Itinerary
+  if (d.days.length) {
+    h2("Day-wise Itinerary");
+    d.days.forEach(line => {
+      const m = line.match(/^(Day\s*\d+\s*:?)\s*(.*)$/i);
+      if (m) {
+        doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+        const label = m[1].replace(/:$/, "") + ": ";
+        const lw = doc.getTextWidth(label);
+        doc.setFont("helvetica", "normal");
+        const wrapped = doc.splitTextToSize(m[2], CW - lw);
+        wrapped.forEach((l, i) => {
+          newPageIf(6);
+          if (i === 0) { doc.setFont("helvetica", "bold"); doc.text(label, M, y); doc.setFont("helvetica", "normal"); doc.text(l, M + lw, y); }
+          else doc.text(l, M + lw, y);
+          y += 5.6;
+        });
+      } else bullet(line);
+    });
+    y += 3;
+  }
+  if (d.inc.length) { h2("Inclusions"); d.inc.forEach(bullet); y += 3; }
+  if (d.exc.length) { h2("Exclusions"); d.exc.forEach(bullet); y += 3; }
+  if (d.supp.length) { h2("Optional Supplements"); d.supp.forEach(bullet); y += 3; }
+  if (d.canc.length) { h2("Cancellation Policy"); d.canc.forEach(t => para(t, 9)); y += 3; }
+  // Price box — ONLY the EET price
+  newPageIf(30);
+  const tint = theme.band.map(c => Math.round(c + (255 - c) * 0.88));
+  doc.setFillColor(tint[0], tint[1], tint[2]);
+  doc.setDrawColor(theme.accent[0], theme.accent[1], theme.accent[2]); doc.setLineWidth(0.8);
+  doc.roundedRect(M, y - 4, CW, 24, 3, 3, "FD");
+  doc.setTextColor(theme.band[0], theme.band[1], theme.band[2]); doc.setFont("helvetica", "bold"); doc.setFontSize(11);
+  doc.text("Your price for this trip", M + 6, y + 3);
+  doc.setFontSize(17); doc.setTextColor(20, 40, 60);
+  doc.text((CUR_SYM[d.eetCur] || (d.eetCur + " ")) + d.eetAmt.toLocaleString("en-IN"), M + 6, y + 12.5);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(90, 90, 90);
+  doc.text("Valid for 7 days from today. Every detail is confirmed personally by Bhavna before you book.", M + 6, y + 18);
+  y += 28;
+  para("To go ahead, just reply on WhatsApp — Bhavna will confirm availability and lock your trip.", 10);
+  // Footers
+  const pages = doc.getNumberOfPages();
+  for (let i = 1; i <= pages; i++) {
+    doc.setPage(i);
+    doc.setDrawColor(210, 220, 228); doc.setLineWidth(0.3); doc.line(M, 286, W - M, 286);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(120, 120, 120);
+    doc.text("Elite Exposures Travel · 243, Tower B3, Spaze I Tech Park, Gurugram · bhavna@eliteexposures.in · WhatsApp +91 8860145084", W / 2, 291, { align: "center" });
+    doc.text("Page " + i + " of " + pages, W - M, 291, { align: "right" });
+  }
+}
+async function generateQuotePDF() {
+  const d = quoteDataFromForm();
+  if (!d.eetAmt) {
+    setFlag("eetPrice", "missing", "Type your EET price first");
+    $("#quoteStatus").textContent = "Please type your EET price first — it is the only price on the PDF.";
+    $("#qEetAmt").focus();
+    return;
+  }
+  $("#quoteStatus").textContent = "Building your PDF…";
+  try {
+    await loadLib("jspdf");
+    const doc = new window.jspdf.jsPDF({ unit: "mm", format: "a4" });
+    buildQuotePDF(doc, d);
+    const fname = "Elite-Exposures-Quote-" + d.dest.replace(/[^A-Za-z]+/g, "-") + (d.client ? "-" + d.client.replace(/[^A-Za-z]+/g, "-") : "") + ".pdf";
+    doc.save(fname);
+    $("#quoteStatus").textContent = "PDF downloaded ✓ — " + fname;
+  } catch (e) {
+    $("#quoteStatus").textContent = "The PDF library couldn't load — check the connection and try again.";
+  }
+}
+$("#qGenerate").addEventListener("click", generateQuotePDF);
 $("#quoteSave").addEventListener("click", () => {
+  const d = quoteDataFromForm();
+  if (!d.eetAmt) { $("#quoteStatus").textContent = "Type your EET price before saving the quote."; return; }
   const saved = load("ee_quotes", []);
-  saved.unshift({ client: $("#qClient").value, dest: $("#qDest").value, final: quoteFinal(), when: new Date().toLocaleDateString("en-IN") });
+  saved.unshift({ client: d.client || "(no name yet)", dest: d.dest, eet: (CUR_SYM[d.eetCur] || d.eetCur + " ") + d.eetAmt.toLocaleString("en-IN"), when: new Date().toLocaleDateString("en-IN") });
   store("ee_quotes", saved);
   $("#quoteStatus").textContent = "Quote saved ✓ (private list below)";
   renderSavedQuotes();
@@ -219,7 +553,7 @@ $("#quoteSave").addEventListener("click", () => {
 function renderSavedQuotes() {
   const saved = load("ee_quotes", []);
   $("#quoteSaved").innerHTML = saved.length ? "<h3 style='color:var(--navy)'>Saved quotes</h3>" + saved.map(q =>
-    `<div class="saved-item"><span>${esc(q.client)} — ${esc(q.dest)}</span><strong>${fmt(q.final)}</strong><span>${esc(q.when)}</span></div>`).join("") : "";
+    `<div class="saved-item"><span>${esc(q.client)} — ${esc(q.dest)}</span><strong>${esc(q.eet || (q.final ? fmt(q.final) : ""))}</strong><span>${esc(q.when)}</span></div>`).join("") : "";
 }
 
 // ---------- Itinerary Builder ----------
@@ -371,7 +705,7 @@ renderDashboard();
 renderOffers();
 renderGallery();
 renderStories();
-renderQuote();
+renderQHotels();
 renderSavedQuotes();
 renderItin();
 renderInv();
