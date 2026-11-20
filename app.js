@@ -66,11 +66,17 @@ document.querySelectorAll("#destTabs .tab").forEach(tab => {
 setTimeout(cfCenter, 300);
 
 // --- Recent Gallery (destination photos; tap to open the journey) ---
-withImg.slice(0, 8).forEach((d, i) => {
+// Admin Panel v1 wiring: Bhavna's saved gallery (this browser) wins over samples.
+let galleryItems = withImg.slice(0, 8).map(d => ({ img: d.img, name: d.name, destId: d.id }));
+try {
+  const savedGallery = JSON.parse(localStorage.getItem("ee_gallery") || "null");
+  if (Array.isArray(savedGallery) && savedGallery.length) galleryItems = savedGallery;
+} catch (e) { /* keep samples */ }
+galleryItems.forEach(g => {
   const el = document.createElement("div");
   el.className = "gallery-tile";
-  el.innerHTML = `<img src="${d.img.replace("w=1000", "w=700")}" alt="${d.name}" loading="lazy">`;
-  el.addEventListener("click", () => openDest(d.id));
+  el.innerHTML = `<img src="${String(g.img).replace("w=1000", "w=700")}" alt="${g.name || ""}" loading="lazy">`;
+  if (g.destId) el.addEventListener("click", () => openDest(g.destId));
   gallery.appendChild(el);
 });
 
@@ -545,7 +551,24 @@ document.querySelectorAll("[data-dest-name]").forEach(a => a.addEventListener("c
   document.getElementById("fDest").value = a.dataset.destName;
   closeNavAndDrops();
 }));
-// Offers (Batch #5): an offer's Enquire pre-picks its destination and notes the offer
+// Offers: an offer's Enquire pre-picks its destination and notes the offer.
+// Admin Panel v1 wiring: Bhavna's saved offers (this browser) win over samples.
+try {
+  const savedOffers = JSON.parse(localStorage.getItem("ee_offers") || "null");
+  if (Array.isArray(savedOffers) && savedOffers.length) {
+    const row = document.querySelector(".offers-row");
+    if (row) row.innerHTML = savedOffers.map(o => `
+      <article class="offer-card">
+        <img src="${o.img}" alt="${o.title}" loading="lazy">
+        <div class="offer-body">
+          <h3>${o.title}</h3>
+          <p>${o.line}</p>
+          <span class="offer-valid">Valid till ${o.valid}</span>
+          <button class="btn btn-blue offer-btn" data-offer-dest="${o.dest}" data-offer-title="${o.title}">Enquire →</button>
+        </div>
+      </article>`).join("");
+  }
+} catch (e) { /* keep the built-in sample offers */ }
 document.querySelectorAll(".offer-btn").forEach(b => b.addEventListener("click", () => {
   document.getElementById("fDest").value = b.dataset.offerDest;
   const msg = document.getElementById("fMsg");
@@ -556,10 +579,16 @@ document.querySelectorAll(".offer-btn").forEach(b => b.addEventListener("click",
 (function stories() {
   const grid = document.getElementById("storyGrid");
   if (!grid) return;
-  grid.innerHTML = DESTINATIONS.map(d => `
-    <article class="story-card" data-story="${d.id}">
-      ${d.img ? `<img src="${d.img}" alt="${d.name}" loading="lazy">` : `<div class="story-grad">${d.name}</div>`}
-      <div class="story-body"><h3>${d.name}</h3><p>${d.card}</p><span class="story-link">Explore this story →</span></div>
+  // Admin Panel v1 wiring: Bhavna's saved stories (this browser) win over samples.
+  let storyItems = DESTINATIONS.map(d => ({ id: d.id, title: d.name, text: d.card, img: d.img }));
+  try {
+    const savedStories = JSON.parse(localStorage.getItem("ee_stories") || "null");
+    if (Array.isArray(savedStories) && savedStories.length) storyItems = savedStories;
+  } catch (e) { /* keep samples */ }
+  grid.innerHTML = storyItems.map(s => `
+    <article class="story-card" data-story="${s.id}">
+      ${s.img ? `<img src="${s.img}" alt="${s.title}" loading="lazy">` : `<div class="story-grad">${s.title}</div>`}
+      <div class="story-body"><h3>${s.title}</h3><p>${s.text}</p><span class="story-link">Explore this story →</span></div>
     </article>`).join("");
   grid.querySelectorAll("[data-story]").forEach(c => c.addEventListener("click", () => {
     const d = DESTINATIONS.find(x => x.id === c.dataset.story);
@@ -580,7 +609,17 @@ adminOverlay.addEventListener("click", e => { if (e.target === adminOverlay) clo
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeAdmin(); });
 document.getElementById("adminForm").addEventListener("submit", e => {
   e.preventDefault();
-  document.getElementById("adminNote").hidden = false;
+  // Demo login (template v1 placeholder — production security is Phase 2).
+  const u = document.getElementById("adminUser").value.trim();
+  const pw = document.getElementById("adminPass").value;
+  if (u === "bhavna" && pw === "welcome123") {
+    sessionStorage.setItem("ee_admin", "1");
+    location.href = "admin.html";
+  } else {
+    const note = document.getElementById("adminNote");
+    note.textContent = "Those details don't match this demo's login — please try again.";
+    note.hidden = false;
+  }
 });
 // BYOD page handoff: a plan built on byod.html pre-fills this form
 try {
