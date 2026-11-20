@@ -46,7 +46,7 @@
       i > 0 && SMALL_WORDS.has(w) ? w : w.replace(/[a-z]/, c => c.toUpperCase())).join(" ");
   }
   function cleanLine(s) {
-    return String(s || "").replace(/^[·.•Ø*\-–—\s]+/, "").replace(/\s+/g, " ").trim();
+    return String(s || "").replace(/^[\uF0B7·.•Ø*\-–—\s]+/, "").replace(/\s+/g, " ").trim();
   }
   const MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
 
@@ -119,7 +119,8 @@
       const words = text.match(/(half board|full board|bed (?:and|&) breakfast|all inclusive|room only)/i);
       if (words) meal = titleCase(words[1]);
     }
-    if (meal) set("mealPlan", meal, "ok"); else set("mealPlan", "", "missing", "Meal plan not found");
+    if (!meal && /daily breakfast/i.test(text)) set("mealPlan", "Breakfast (BB)", "check", "Read from the inclusions — the document lists daily breakfast");
+    else if (meal) set("mealPlan", meal, "ok"); else set("mealPlan", "", "missing", "Meal plan not found");
 
     // ---- Hotel category ----
     const catM = text.match(/hotel category[:\s]*([0-9](?:\.[0-9])?)\s*stars?/i) || text.match(/\b([0-9])\s*stars?\s*(?:hotel|category|property)/i) || text.match(/\b([0-9])\s*stars?\b/i);
@@ -127,7 +128,7 @@
     else set("hotelCategory", "", "missing", "Hotel category not found");
 
     // ---- Hotels ----
-    const hotels = [];
+    let hotels = [];
     tables.forEach(t => t.rows.forEach(r => {
       if (r.length >= 3 && /^\s*\d{1,2}\s*N(?:ights?)?\s*$/i.test(r[0])) {
         hotels.push({
@@ -165,13 +166,83 @@
         }
       });
     }
+    // Hotel table as plain lines (typical for PDFs): City | Hotel Name | Check in | Check out
+    // header, then city / hotel / date / date groups — or whole rows joined on one line.
+    let tableCheckinISO = "", mergedDupes = 0;
+    if (!hotels.length) {
+      const MON3 = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+      const dateTok = l => { const m = l.match(/^(\d{1,2})\s*([A-Za-z]{3,9})$/); return m && MON3[m[2].slice(0, 3).toLowerCase()] ? { d: +m[1], m: MON3[m[2].slice(0, 3).toLowerCase()] } : null; };
+      const rawStays = [];
+      lines.forEach(l => {
+        const m = l.match(/^(.+?)\s+(\d{1,2})\s*([A-Za-z]{3,9})\s+(\d{1,2})\s*([A-Za-z]{3,9})\s*(\(.*\))?$/);
+        if (m && MON3[m[3].slice(0, 3).toLowerCase()] && MON3[m[5].slice(0, 3).toLowerCase()]) {
+          const words = m[1].trim().split(/\s+/);
+          rawStays.push({ city: words[0], name: words.slice(1).join(" "), inD: { d: +m[2], m: MON3[m[3].slice(0, 3).toLowerCase()] }, outD: { d: +m[4], m: MON3[m[5].slice(0, 3).toLowerCase()] }, room: m[6] ? m[6].replace(/[()]/g, "") : "" });
+        }
+      });
+      if (!rawStays.length) {
+        const hi2 = lines.findIndex((l, i) => /^city$/i.test(l.trim()) && lines.slice(i, i + 4).some(x => /hotel name/i.test(x)));
+        if (hi2 >= 0) {
+          let startI = hi2 + 1;
+          for (let j = hi2; j < Math.min(lines.length, hi2 + 5); j++) if (/^check out/i.test(lines[j].trim())) { startI = j + 1; break; }
+          let cur = null;
+          const flush = () => { if (cur && cur.name && cur.inD && cur.outD) rawStays.push(cur); cur = null; };
+          for (let i = startI; i < lines.length; i++) {
+            const l = lines[i].trim();
+            if (!l) continue;
+            if (/^inclusions/i.test(l)) { flush(); break; }
+            const dt = dateTok(l);
+            if (dt) { if (cur && !cur.inD) cur.inD = dt; else if (cur && !cur.outD) { cur.outD = dt; } continue; }
+            if (/^\(.*\)$/.test(l)) { if (cur) cur.room = l.replace(/[()]/g, ""); continue; }
+            const wrapM = l.match(/^(.+?)\s*\(([^)]+)\)$/);
+            if (wrapM && cur && cur.inD && cur.outD) { cur.name += " " + wrapM[1]; if (!cur.room) cur.room = wrapM[2]; continue; }
+            if (cur && cur.inD && cur.outD) flush();
+            if (!cur) cur = { city: l, name: "", inD: null, outD: null, room: "" };
+            else if (!cur.name) cur.name = l;
+            else if (!cur.inD) cur.name += " " + l;
+          }
+          flush();
+        }
+      }
+      const seen = {};
+      rawStays.forEach(st => {
+        const key = (st.name.toLowerCase().split(/\s+/).slice(0, 3).join(" ") + "|" + st.inD.d + "/" + st.inD.m + "|" + st.outD.d + "/" + st.outD.m);
+        if (seen[key]) { seen[key].rooms = (seen[key].rooms || 1) + 1; mergedDupes++; }
+        else { st.rooms = 1; seen[key] = st; hotels.push(st); }
+      });
+      hotels = hotels.map(st => {
+        let nights = (st.outD.m - st.inD.m) * 30 + (st.outD.d - st.inD.d);
+        if (nights < 0) nights += 365;
+        if (!tableCheckinISO) {
+          const now = new Date(); let yr = now.getFullYear();
+          const cand = new Date(yr, st.inD.m - 1, st.inD.d);
+          if ((now - cand) / 864e5 > 30) yr += 1;
+          tableCheckinISO = yr + "-" + String(st.inD.m).padStart(2, "0") + "-" + String(st.inD.d).padStart(2, "0");
+        }
+        return { nights, area: titleCase(cleanLine(st.city)), name: titleCase(cleanLine(st.name)), room: titleCase(cleanLine(st.room || "")), _rooms: st.rooms };
+      });
+      const rcIdx = lines.findIndex(l => /^room category/i.test(l.trim()));
+      if (rcIdx >= 0 && hotels.length) {
+        const parts = [];
+        for (let i = rcIdx + 1; i < Math.min(lines.length, rcIdx + 7); i++) {
+          const l = cleanLine(lines[i]);
+          if (!l) { if (parts.length) break; continue; }
+          if (/^(tentative|day\s*\d|inclusions|exclusions)/i.test(l)) break;
+          parts.push(l);
+        }
+        if (parts.length) hotels.forEach(h => { if (!h.room || /double room/i.test(h.room)) h.room = parts.join(" "); });
+      }
+      if (mergedDupes) hotels.forEach(h => { if (h._rooms > 1) h.room = (h.room ? h.room + " · " : "") + h._rooms + " rooms"; });
+      hotels.forEach(h => delete h._rooms);
+      if (hotels.length && (!F.travelDate || F.travelDate.status === "missing") && tableCheckinISO) set("travelDate", tableCheckinISO, "check", "The document gives no year — the date is the hotel check-in; please confirm the year");
+    }
     if (familyHeads.length >= 2) set("families", familyHeads.length, "check",
       "This document quotes " + familyHeads.length + " families separately, each with its own stay and cost — please review every family's lines");
-    if (hotels.length) set("hotels", hotels, familyHeads.length >= 2 ? "check" : "ok", familyHeads.length >= 2 ? "One row per family — check nights and dates per family" : "");
+    if (hotels.length) set("hotels", hotels, (familyHeads.length >= 2 || mergedDupes) ? "check" : "ok", mergedDupes ? "The same stay was listed more than once (one row per room) — merged into one stay" : (familyHeads.length >= 2 ? "One row per family — check nights and dates per family" : ""));
     else set("hotels", [], "missing", "No hotel rows found");
 
     // ---- Nights total ----
-    const itinM = text.match(/(\d{1,2})\s*nights?\s*(\d{1,2})\s*days?/i);
+    const itinM = text.match(/(\d{1,2})\s*nights?\s*[/,]?\s*(\d{1,2})\s*days?/i);
     const nightsLabel = text.match(/no\.?\s*of\s*nights?[:\s]*(\d{1,2})/i);
     const totalNights = (nightsLabel ? +nightsLabel[1] : 0) || hotels.reduce((s, h) => s + (+h.nights || 0), 0) || (itinM ? +itinM[1] : 0);
     if (totalNights) set("nights", totalNights, "ok");
@@ -206,7 +277,7 @@
         const fm = l.match(/^\s*(family\s*\d+)/i);
         if (fm) famCtx = titleCase(fm[1]);
         const mm = l.match(moneyRe);
-        if (mm && /total cost|cost\s*:/i.test(l)) {
+        if (mm && /total/i.test(l)) {
           costLineHits.push({
             label: famCtx || "Cost",
             amount: parseFloat(mm[2].replace(/,/g, "")),
@@ -221,6 +292,11 @@
         "Separate cost blocks found — itemised here; nothing was merged");
       cost = { amount: "", currency: costLineHits[0].currency, basis: costLineHits.length + " separate totals — see the cost breakdown" };
       set("dmcCost", cost, "check", "This document has more than one cost block — use the itemised breakdown below");
+    } else if (costLineHits.length === 1 && !cost) {
+      const h = costLineHits[0];
+      const tail = (h.raw.match(/for\s+(.+)$/i) || [])[1] || "";
+      cost = { amount: h.amount, currency: h.currency, basis: tail ? "Total for " + tail.replace(/(\d)([A-Za-z])/g, "$1 $2").replace(/([A-Za-z])(\d)/g, "$1 $2").replace(/([A-Za-z])\(/g, "$1 (").replace(/\s+/g, " ") : "Total" };
+      set("costLines", [], "ok");
     } else if (costLineHits.length) {
       set("costLines", costLineHits.map(c => c.label + " — " + c.currency + " " + c.amount.toLocaleString("en-IN")), "ok");
     } else {
@@ -249,8 +325,9 @@
     if (!days.length) {
       let cur = null;
       lines.forEach(l => {
-        const dm2 = l.match(/^\s*day\s*0?(\d{1,2})\b[:\s-]*(.*)$/i);
+        const dm2 = l.match(/^\s*day\s*0?(\d{1,2})\s*[:\-–.]?\s*(.*)$/i);
         if (dm2) { cur = { day: +dm2[1], text: cleanLine(dm2[2]) }; days.push(cur); }
+        else if (/^(inclusions|exclusions|room category|tentative itinerary|total|hope you|your jo)/i.test(l.trim())) { cur = null; }
         else if (cur && cleanLine(l) && !/^(itinerary|stay at)\b/i.test(l)) {
           if (/^stay at/i.test(l)) cur.text += ` (${cleanLine(l)})`;
           else cur.text = (cur.text + " " + cleanLine(l)).trim();
@@ -313,7 +390,7 @@
         for (let i = hi + 1; i < end; i++) if (cleanLine(lines[i])) inc.push(cleanLine(lines[i]));
       }
       if (he >= 0) for (let i = he + 1; i < Math.min(lines.length, he + 14); i++) {
-        if (/^(cancellation|kindly note|please note|terms)/i.test(lines[i])) break;
+        if (/^(cancellation|kindly note|please note|terms|room category|tentative itinerary|day\s*\d)/i.test(lines[i])) break;
         if (cleanLine(lines[i])) exc.push(cleanLine(lines[i]));
       }
       incStatus = inc.length ? "check" : "missing";
@@ -362,6 +439,8 @@
       const g = greetM[1].replace(/[!.,\s]+$/, "").trim();
       if (g && !/elite/i.test(g)) branding.push("Company name: " + g);
     }
+    const withM = text.match(/(?:trip|holiday|tour|travel|stay)\s+with\s+([A-Z][A-Za-z&]+(?:\s+[A-Z][A-Za-z&]+){0,3})\s*[!.]/);
+    if (withM && !/elite/i.test(withM[1])) branding.push("Company name: " + withM[1].trim());
     const emailM = text.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g) || [];
     emailM.forEach(e => { if (!/eliteexposures/i.test(e)) branding.push("Email: " + e); });
     const urlM = text.match(/(?:www\.)[A-Za-z0-9.-]+\.[A-Za-z]{2,}|[A-Za-z0-9-]+\.(?:com|net|org|io|travel|tours|lk|in|co)\/[^\s)]*/gi) || [];
