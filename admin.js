@@ -422,16 +422,53 @@ function quoteDataFromForm() {
     eetAmt: +$("#qEetAmt").value || 0, eetCur: $("#qEetCur").value
   };
 }
+const PDF_NAVY = [13, 43, 69], PDF_GOLD = [217, 164, 65];
+function drawWatermark(doc, dest) {
+  // Big, very light country watermark behind the content: the country's name
+  // across the page plus a simple line illustration for known destinations.
+  // Pale colours are used directly (jsPDF's GState alpha does not apply to
+  // stroked shapes in this build, so colour does the fading).
+  const W = 210, H = 297;
+  doc.setTextColor(206, 222, 233);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(54);
+  doc.text(String(dest || "Travel").toUpperCase(), W / 2, H / 2 + 34, { align: "center", angle: 24 });
+  doc.setDrawColor(196, 214, 227);
+  doc.setLineWidth(0.7);
+  const cx = W / 2, cy = 118;
+  if (/singapore/i.test(dest)) { // skyline
+    const hs = [26, 40, 32, 52, 36, 46, 28];
+    hs.forEach((h, i) => doc.rect(cx - 52 + i * 15, cy + 26 - h, 10, h, "S"));
+    doc.circle(cx + 34, cy - 34, 9, "S");
+  } else if (/sri lanka/i.test(dest)) { // lotus
+    doc.ellipse(cx, cy, 10, 24, "S");
+    doc.ellipse(cx - 19, cy + 7, 8, 17, "S");
+    doc.ellipse(cx + 19, cy + 7, 8, 17, "S");
+    doc.ellipse(cx, cy + 30, 32, 6, "S");
+  } else if (/maldives|mauritius|seychelles/i.test(dest)) { // waves
+    for (let r = 0; r < 3; r++) {
+      const pts = [];
+      for (let x = 0; x <= 20; x++) pts.push([5, (x % 2 === 0 ? -4 : 4) * (x === 0 || x === 20 ? 0 : 1)]);
+      doc.lines(pts, cx - 50, cy - 12 + r * 14, [1, 1], "S", false);
+    }
+    doc.circle(cx + 38, cy - 30, 10, "S");
+  } else if (/thailand/i.test(dest)) { // tiered temple roofs
+    doc.triangle(cx - 26, cy + 16, cx + 26, cy + 16, cx, cy - 12, "S");
+    doc.triangle(cx - 17, cy - 8, cx + 17, cy - 8, cx, cy - 28, "S");
+    doc.triangle(cx - 8, cy - 24, cx + 8, cy - 24, cx, cy - 38, "S");
+  } else { // rings
+    [16, 27, 38].forEach(r => doc.circle(cx, cy, r, "S"));
+  }
+}
 function buildQuotePDF(doc, d, logo) {
-  const theme = QUOTE_THEMES[d.dest] || { band: [13, 43, 69], accent: [28, 168, 221] };
   const W = 210, M = 16, CW = W - 2 * M;
   let y = 0;
-  const newPageIf = need => { if (y + need > 280) { doc.addPage(); y = 18; } };
+  drawWatermark(doc, d.dest);
+  const newPageIf = need => { if (y + need > 280) { doc.addPage(); drawWatermark(doc, d.dest); y = 18; } };
   const h2 = t => {
     newPageIf(13);
-    doc.setFont("helvetica", "bold"); doc.setFontSize(12.5); doc.setTextColor(theme.band[0], theme.band[1], theme.band[2]);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(12.5); doc.setTextColor(PDF_NAVY[0], PDF_NAVY[1], PDF_NAVY[2]);
     doc.text(t, M, y); y += 2.2;
-    doc.setDrawColor(theme.accent[0], theme.accent[1], theme.accent[2]); doc.setLineWidth(0.7); doc.line(M, y, M + 22, y); y += 6;
+    doc.setDrawColor(PDF_GOLD[0], PDF_GOLD[1], PDF_GOLD[2]); doc.setLineWidth(0.7); doc.line(M, y, M + 22, y); y += 6;
     doc.setTextColor(45, 45, 45);
   };
   const bullet = t => {
@@ -442,26 +479,20 @@ function buildQuotePDF(doc, d, logo) {
     doc.setFont("helvetica", "normal"); doc.setFontSize(size || 10);
     doc.splitTextToSize(t, CW).forEach(l => { newPageIf(6); doc.text(l, M, y); y += 5.6; });
   };
-  // Header band
-  doc.setFillColor(theme.band[0], theme.band[1], theme.band[2]); doc.rect(0, 0, W, 34, "F");
-  doc.setFillColor(theme.accent[0], theme.accent[1], theme.accent[2]); doc.rect(0, 34, W, 1.6, "F");
-  doc.setDrawColor(theme.accent[0], theme.accent[1], theme.accent[2]); doc.setLineWidth(0.45);
-  [3, 5.6, 8.2].forEach(r => doc.circle(196, 13, r, "S"));
+  // Plain white header — logo + title, thin gold divider (theme lives in the watermark)
   if (logo) {
-    doc.setFillColor(255, 255, 255); doc.roundedRect(M, 5.5, 56, 15.5, 2.5, 2.5, "F");
-    try { doc.addImage(logo, "PNG", M + 2.5, 7.4, 51, 11.6); } catch (e) { /* fall through silently */ }
-    doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.setFontSize(15);
-    doc.text("Travel Quote — " + d.dest, M + 64, 14.5);
-    doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(224, 238, 246);
-    doc.text("Planned personally by Bhavna Sehrawat, Founder", M + 64, 21.5);
+    try { doc.addImage(logo, "PNG", M, 9, 51, 11.6); } catch (e) { /* fall through silently */ }
+    doc.setTextColor(PDF_NAVY[0], PDF_NAVY[1], PDF_NAVY[2]); doc.setFont("helvetica", "bold"); doc.setFontSize(15);
+    doc.text("Travel Quote — " + d.dest, M + 58, 15);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(110, 110, 110);
+    doc.text("Planned personally by Bhavna Sehrawat, Founder", M + 58, 21.5);
   } else {
-    doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.setFontSize(19);
-    doc.text("Elite Exposures Travel", M, 15);
-    doc.setFont("helvetica", "normal"); doc.setFontSize(11); doc.setTextColor(224, 238, 246);
-    doc.text("Travel Quote — " + d.dest, M, 24);
-    doc.setFontSize(9); doc.text("Planned personally by Bhavna Sehrawat", M, 30);
+    doc.setTextColor(PDF_NAVY[0], PDF_NAVY[1], PDF_NAVY[2]); doc.setFont("helvetica", "bold"); doc.setFontSize(18);
+    doc.text("Elite Exposures Travel", M, 14);
+    doc.setFontSize(12); doc.text("Travel Quote — " + d.dest, M, 21.5);
   }
-  y = 46;
+  doc.setDrawColor(PDF_GOLD[0], PDF_GOLD[1], PDF_GOLD[2]); doc.setLineWidth(0.8); doc.line(M, 26, W - M, 26);
+  y = 36;
   // Meta
   doc.setTextColor(45, 45, 45);
   const guests = [d.adults ? d.adults + " Adults" : "", d.children && +d.children ? d.children + " Children" + (d.childAges ? " (" + d.childAges + ")" : "") : ""].filter(Boolean).join(", ");
@@ -484,7 +515,7 @@ function buildQuotePDF(doc, d, logo) {
     const cols = [M, M + 18, M + 56, M + 128]; // Nights | Area | Hotel | Room
     const heads = ["Nights", "Area", "Hotel", "Room"];
     newPageIf(10);
-    doc.setFillColor(theme.band[0], theme.band[1], theme.band[2]); doc.rect(M, y - 4.6, CW, 8, "F");
+    doc.setFillColor(PDF_NAVY[0], PDF_NAVY[1], PDF_NAVY[2]); doc.rect(M, y - 4.6, CW, 8, "F");
     doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
     heads.forEach((h, i) => doc.text(h, cols[i] + 1.5, y + 1)); y += 8.5;
     doc.setTextColor(45, 45, 45);
@@ -528,11 +559,11 @@ function buildQuotePDF(doc, d, logo) {
   if (d.canc.length) { h2("Cancellation Policy"); d.canc.forEach(t => para(t, 9)); y += 3; }
   // Price box — ONLY the EET price
   newPageIf(30);
-  const tint = theme.band.map(c => Math.round(c + (255 - c) * 0.88));
+  const tint = PDF_NAVY.map(c => Math.round(c + (255 - c) * 0.92));
   doc.setFillColor(tint[0], tint[1], tint[2]);
-  doc.setDrawColor(theme.accent[0], theme.accent[1], theme.accent[2]); doc.setLineWidth(0.8);
+  doc.setDrawColor(PDF_GOLD[0], PDF_GOLD[1], PDF_GOLD[2]); doc.setLineWidth(0.8);
   doc.roundedRect(M, y - 4, CW, 24, 3, 3, "FD");
-  doc.setTextColor(theme.band[0], theme.band[1], theme.band[2]); doc.setFont("helvetica", "bold"); doc.setFontSize(11);
+  doc.setTextColor(PDF_NAVY[0], PDF_NAVY[1], PDF_NAVY[2]); doc.setFont("helvetica", "bold"); doc.setFontSize(11);
   doc.text("Your price for this trip", M + 6, y + 3);
   doc.setFontSize(17); doc.setTextColor(20, 40, 60);
   doc.text((CUR_SYM[d.eetCur] || (d.eetCur + " ")) + d.eetAmt.toLocaleString("en-IN"), M + 6, y + 12.5);
@@ -547,7 +578,7 @@ function buildQuotePDF(doc, d, logo) {
     doc.setDrawColor(210, 220, 228); doc.setLineWidth(0.3); doc.line(M, 286, W - M, 286);
     doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(120, 120, 120);
     doc.text("Elite Exposures Travel · 243, Tower B3, Spaze I Tech Park, Gurugram · bhavna@eliteexposures.in · WhatsApp +91 8860145084", W / 2, 291, { align: "center" });
-    doc.text("Page " + i + " of " + pages, W - M, 291, { align: "right" });
+    doc.setFontSize(7.5); doc.text("Page " + i + " of " + pages, W - M, 30.5, { align: "right" });
   }
 }
 async function generateQuotePDF() {
@@ -576,9 +607,7 @@ async function generateQuotePDF() {
 // Google Docs, fully editable) with the logo embedded.
 function hex(rgb) { return "#" + rgb.map(c => c.toString(16).padStart(2, "0")).join(""); }
 function buildQuoteDOC(d, logo) {
-  const theme = QUOTE_THEMES[d.dest] || { band: [13, 43, 69], accent: [28, 168, 221] };
-  const band = hex(theme.band), accent = hex(theme.accent);
-  const tint = hex(theme.band.map(c => Math.round(c + (255 - c) * 0.88)));
+  const band = "#0d2b45", accent = "#d9a441", tint = "#eef4f8"; // brand chrome on white; the country theme is the watermark
   const guests = [d.adults ? d.adults + " Adults" : "", d.children && +d.children ? d.children + " Children" + (d.childAges ? " (" + d.childAges + ")" : "") : ""].filter(Boolean).join(", ");
   const dateStr = d.date ? new Date(d.date + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) : "—";
   const E = esc;
@@ -590,13 +619,13 @@ function buildQuoteDOC(d, logo) {
     const m = l.match(/^(Day\s*\d+\s*:?)\s*(.*)$/i);
     return m ? `<p class="day"><strong>${E(m[1].replace(/:$/, ""))}:</strong> ${E(m[2])}</p>` : `<p class="day">${E(l)}</p>`;
   }).join("") : "";
-  return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8">
+  return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns:v="urn:schemas-microsoft-com:vml"><head><meta charset="utf-8">
 <title>Elite Exposures Travel — Quote — ${E(d.dest)}</title>
 <style>
 body{font-family:Calibri,Arial,sans-serif;color:#2d2d2d;font-size:11pt}
-.band{background:${band};color:#ffffff;padding:18px 20px}
-.band .dest{font-size:16pt;font-weight:bold;color:#ffffff}
-.band .sub{font-size:10pt;color:#e0eef6}
+.band{background:#ffffff;color:#0d2b45;padding:6px 0 14px;border-bottom:2.5px solid #d9a441}
+.band .dest{font-size:16pt;font-weight:bold;color:#0d2b45}
+.band .sub{font-size:10pt;color:#6e6e6e}
 h2{color:${band};font-size:13pt;border-bottom:2.5px solid ${accent};padding-bottom:3px;margin:18px 0 8px}
 table.meta td{padding:2px 14px 2px 0;font-size:11pt}
 table.hotels{border-collapse:collapse;width:100%}
@@ -610,8 +639,9 @@ ul{margin:6px 0 6px 18px;padding:0}
 .pricebox .pnote{font-size:9pt;color:#5a5a5a}
 .footer{border-top:1px solid #d5dee5;color:#787878;font-size:8.5pt;text-align:center;padding-top:8px;margin-top:24px}
 </style></head><body>
+<!--[if gte mso 9]><v:shape id="eeWatermark" type="#_x0000_t136" style="position:absolute;margin-left:0;margin-top:150pt;width:470pt;height:150pt;z-index:-1;mso-position-horizontal:center" fillcolor="#e9eff4" stroked="f"><v:textpath style="font-family:Calibri,Arial,sans-serif;font-size:58pt;font-weight:bold" string="${E(String(d.dest || "Travel").toUpperCase())}"/></v:shape><![endif]-->
 <table width="100%" cellspacing="0" cellpadding="0"><tr><td class="band">
-${logo ? `<table cellspacing="0" cellpadding="0"><tr><td style="background:#ffffff;padding:6px 10px"><img src="${logo}" width="180"></td><td style="padding-left:16px"><div class="dest">Travel Quote — ${E(d.dest)}</div><div class="sub">Planned personally by Bhavna Sehrawat, Founder</div></td></tr></table>` : `<div class="dest">Elite Exposures Travel</div><div class="sub">Travel Quote — ${E(d.dest)} · Planned personally by Bhavna Sehrawat</div>`}
+${logo ? `<table cellspacing="0" cellpadding="0"><tr><td><img src="${logo}" width="180"></td><td style="padding-left:16px"><div class="dest">Travel Quote — ${E(d.dest)}</div><div class="sub">Planned personally by Bhavna Sehrawat, Founder</div></td></tr></table>` : `<div class="dest">Elite Exposures Travel</div><div class="sub">Travel Quote — ${E(d.dest)} · Planned personally by Bhavna Sehrawat</div>`}
 </td></tr></table>
 <table class="meta" cellspacing="0" cellpadding="0">
 <tr><td><strong>Prepared for:</strong></td><td>${E(d.client || "—")}</td><td><strong>Travel date:</strong></td><td>${E(dateStr)}</td></tr>
