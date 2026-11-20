@@ -103,11 +103,12 @@ header.scrolled{box-shadow:0 10px 30px rgba(13,43,69,.1)}
 .caret{font-size:.68rem;transition:transform .25s}
 .has-drop.open .caret{transform:rotate(180deg)}
 .mega{height:548px;position:absolute;top:calc(100% + 14px);left:50%;transform:translate(-50%,10px);background:#fff;border-radius:18px;box-shadow:0 30px 60px rgba(13,43,69,.18);padding:1.25rem 1.5rem;display:grid;grid-template-columns:repeat(4,minmax(150px,auto));gap:1.7rem;z-index:60;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .28s ease,transform .28s ease,visibility 0s linear .28s}
-.drop{height:548px;position:absolute;top:calc(100% + 14px);left:0;transform:translateY(10px);background:#fff;border-radius:16px;box-shadow:0 30px 60px rgba(13,43,69,.18);padding:.6rem;min-width:235px;z-index:60;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .28s ease,transform .28s ease,visibility 0s linear .28s}
+.drop{height:548px;position:absolute;top:calc(100% + 28px);left:0;transform:translateY(10px);background:#fff;border-radius:16px;box-shadow:0 30px 60px rgba(13,43,69,.18);padding:.6rem;min-width:235px;z-index:60;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .28s ease,transform .28s ease,visibility 0s linear .28s}
 .has-drop:hover .mega,.has-drop:focus-within .mega,.has-drop.open .mega{opacity:1;visibility:visible;transform:translate(-50%,0);pointer-events:auto;transition:opacity .28s ease,transform .28s ease}
 .has-drop.drop-suppress .mega,.has-drop.drop-suppress .drop{opacity:0 !important;visibility:hidden !important;pointer-events:none !important}
 .has-drop:hover .drop,.has-drop:focus-within .drop,.has-drop.open .drop{opacity:1;visibility:visible;transform:translateY(0);pointer-events:auto;transition:opacity .28s ease,transform .28s ease}
 .mega::before,.drop::before{content:"";position:absolute;left:0;right:0;top:-16px;height:16px}
+.drop::before{top:-30px;height:30px}
 @keyframes dropIn{from{opacity:0}to{opacity:1}}
 .mega-col h5{font-size:.7rem;letter-spacing:.13em;text-transform:uppercase;color:var(--blue-dark);margin:.35rem 0 .5rem}
 .mega-col a,.drop a{display:block;padding:.32rem .45rem;border-radius:8px;text-decoration:none;color:var(--navy);font-weight:600;font-size:.92rem;white-space:nowrap}
