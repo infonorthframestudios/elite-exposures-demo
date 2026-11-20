@@ -16,6 +16,21 @@ function load(key, seed) {
 }
 function store(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 
+// ---------- Icons (inline SVG, one set for nav + dashboard cards) ----------
+const IC = p => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+const ICONS = {
+  dashboard: IC('<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>'),
+  offers: IC('<rect x="3.5" y="8" width="17" height="4" rx="1"/><path d="M5.5 12v7A1.5 1.5 0 0 0 7 20.5h10A1.5 1.5 0 0 0 18.5 19v-7M12 8v12.5"/><path d="M12 8c-1.8 0-3.5-1-3.5-2.4C8.5 4.2 10 3.5 11 4c1 .6 1 4 1 4Zm0 0c1.8 0 3.5-1 3.5-2.4 0-1.4-1.5-2.1-2.5-1.6-1 .6-1 4-1 4Z"/>'),
+  gallery: IC('<rect x="3.5" y="5" width="17" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M4.5 17.5 10 12l3.5 3L17 11.5l2.5 3"/>'),
+  stories: IC('<path d="M12 6.5C10 5 7.5 4.5 4.5 4.8v13c3-.3 5.5.2 7.5 1.7 2-1.5 4.5-2 7.5-1.7v-13c-3-.3-5.5.2-7.5 1.7Zm0 0v13"/>'),
+  quote: IC('<path d="M6 3.5h12V20l-2-1.4L14 20l-2-1.4L10 20l-2-1.4L6 20Z"/><path d="M9.5 8.5h5M9.5 12h5"/>'),
+  itinerary: IC('<path d="M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6 9 4Zm0 0v14m6-12v14"/>'),
+  invoice: IC('<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3 10h18M6.5 15h4"/>'),
+  worksheet: IC('<path d="M4 4v15.5h16"/><path d="M8.5 16v-5M13 16V8m4.5 8v-3"/>'),
+  leads: IC('<circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19.5c.6-3 2.8-4.5 5.5-4.5s4.9 1.5 5.5 4.5M16 5.7a3.2 3.2 0 0 1 0 5.9m2.3 3.6c1.2.7 2 1.9 2.3 3.8"/>')
+};
+$$(".nav-ic").forEach(el => { el.innerHTML = ICONS[el.dataset.icon] || ""; });
+
 // ---------- Seeds (sample data) ----------
 const SEED_OFFERS = [
   { img: "https://images.unsplash.com/photo-1595184979141-090792f6b578?auto=format&fit=crop&w=800", title: "Honeymoon Bliss — Maldives", line: "A complimentary sunset cruise and a candlelight dinner on the beach, arranged for couples.", valid: "31 Mar 2027", dest: "Maldives" },
@@ -58,14 +73,14 @@ $("#sideToggle").addEventListener("click", () => $("#adminSide").scrollIntoView(
 
 // ---------- Dashboard ----------
 const TOOLS = [
-  ["offers", "🎁", "Offers Manager", "Add, edit or remove the homepage offer cards."],
-  ["gallery", "🖼️", "Gallery Manager", "Choose the photos on the homepage gallery."],
-  ["stories", "📖", "Stories Manager", "Edit story cards and write new ones."],
-  ["quote", "🧾", "Quote Builder", "DMC cost + commission → a client-ready quote."],
-  ["itinerary", "🗺️", "Itinerary Builder", "Day-wise plans you can print or save as PDF."],
-  ["invoice", "💳", "Invoice Builder", "Simple invoices with advance and balance."],
-  ["worksheet", "📊", "Worksheet", "Your monthly working sheet, editable + CSV."],
-  ["leads", "👥", "Leads / Clients", "Every enquiry in one searchable list."]
+  ["offers", "offers", "Offers Manager", "Add, edit or remove the homepage offer cards."],
+  ["gallery", "gallery", "Gallery Manager", "Choose the photos on the homepage gallery."],
+  ["stories", "stories", "Stories Manager", "Edit story cards and write new ones."],
+  ["quote", "quote", "Quote Builder", "DMC cost + commission → a client-ready quote."],
+  ["itinerary", "itinerary", "Itinerary Builder", "Day-wise plans you can print or save as PDF."],
+  ["invoice", "invoice", "Invoice Builder", "Simple invoices with advance and balance."],
+  ["worksheet", "worksheet", "Worksheet", "Your monthly working sheet, editable + CSV."],
+  ["leads", "leads", "Leads / Clients", "Every enquiry in one searchable list."]
 ];
 function renderDashboard() {
   const offers = load("ee_offers", SEED_OFFERS), gallery = load("ee_gallery", SEED_GALLERY),
@@ -75,7 +90,7 @@ function renderDashboard() {
     [leads.length, "Leads tracked"], [leads.filter(l => l.status === "New enquiry").length, "New enquiries"]
   ].map(([n, l]) => `<div class="stat-chip"><strong>${n}</strong><span>${l}</span></div>`).join("");
   $("#toolGrid").innerHTML = TOOLS.map(([v, icon, name, blurb]) =>
-    `<button class="tool-card" data-goto="${v}"><span class="tc-icon">${icon}</span><h3>${name}</h3><p>${blurb}</p></button>`).join("");
+    `<button class="tool-card" data-goto="${v}"><span class="tc-icon">${ICONS[icon] || ""}</span><h3>${name}</h3><p>${blurb}</p></button>`).join("");
   $$("#toolGrid [data-goto]").forEach(c => c.addEventListener("click", () => goto(c.dataset.goto)));
 }
 
