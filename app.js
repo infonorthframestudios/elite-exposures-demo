@@ -614,7 +614,7 @@ document.getElementById("adminForm").addEventListener("submit", e => {
   const pw = document.getElementById("adminPass").value;
   if (u === "bhavna" && pw === "welcome123") {
     sessionStorage.setItem("ee_admin", "1");
-    location.href = "admin.html?v=admin3";
+    location.href = "admin.html?v=admin4";
   } else {
     const note = document.getElementById("adminNote");
     note.textContent = "Those details don't match this demo's login — please try again.";

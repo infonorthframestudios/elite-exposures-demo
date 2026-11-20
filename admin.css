@@ -3,10 +3,10 @@
    cream bands, a touch of gold, Montez script accents, Manrope text. */
 :root{--gold:#d9a441;--gold-soft:#f3d489;--cream:#fdf9ec;--deep:#0a2238}
 .admin-page{background:linear-gradient(180deg,var(--cream) 0,#f4fafc 420px,#f2f8fb 100%)}
-.admin-shell{display:grid;grid-template-columns:262px 1fr;min-height:100vh}
+.admin-shell{display:grid;grid-template-columns:262px minmax(0,1fr);min-height:100vh}
 
 /* ---------- Sidebar (deep navy, like the site footer) ---------- */
-.admin-side{background:linear-gradient(180deg,var(--navy) 0%,var(--deep) 100%);color:#eaf4fa;padding:1.5rem 1.15rem 1.3rem;display:flex;flex-direction:column;gap:1.15rem;position:sticky;top:0;height:100vh}
+.admin-side{min-width:0;background:linear-gradient(180deg,var(--navy) 0%,var(--deep) 100%);color:#eaf4fa;padding:1.5rem 1.15rem 1.3rem;display:flex;flex-direction:column;gap:1.15rem;position:sticky;top:0;height:100vh}
 .admin-brand{display:inline-block;background:#fff;border-radius:14px;padding:.5rem .8rem;box-shadow:0 8px 20px rgba(0,0,0,.18)}
 .admin-brand img{height:40px;display:block}
 .admin-side-title{font-weight:800;color:#fff;font-size:1.08rem;letter-spacing:.01em}
@@ -109,7 +109,7 @@
 .row-del{background:none;border:0;color:#b3352c;font-size:1rem;cursor:pointer;padding:.3rem .5rem}
 
 @media(max-width:900px){
-  .admin-shell{grid-template-columns:1fr}
+  .admin-shell{grid-template-columns:minmax(0,1fr)}
   .admin-side{position:static;height:auto;padding:1.1rem}
   .admin-brand img{height:34px}
   .admin-nav{flex-direction:row;overflow-x:auto;padding-bottom:.4rem}
@@ -142,3 +142,9 @@
   .admin-top h2{font-size:1.28rem}
   .admin-user{display:none}
 }
+
+/* Overflow guard: grid/flex children must be allowed to shrink below their
+   content width, or the whole panel lays out wider than a phone screen. */
+.view,.tool-cols,.tool-form,.preview-wrap,.table-scroll,.admin-stats,.tool-grid,.dash-hero{min-width:0}
+.admin-nav{min-width:0}
+.doc-preview .doc-lines li,.dash-sub{overflow-wrap:break-word}
