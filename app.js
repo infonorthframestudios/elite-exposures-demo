@@ -16,7 +16,6 @@ const WA_NUMBER = "918860145084";
 const track = document.getElementById("destTrack");
 const insta = document.getElementById("instaStrip");
 const gallery = document.getElementById("galleryGrid");
-const popRow = document.getElementById("popRow");
 const footerInsta = document.getElementById("footerInsta");
 const withImg = DESTINATIONS.filter(d => d.img);
 
@@ -65,24 +64,6 @@ document.querySelectorAll("#destTabs .tab").forEach(tab => {
   });
 });
 setTimeout(cfCenter, 300);
-
-// --- Most Popular Tour cards (featured destinations; price on enquiry, no ratings) ---
-["maldives", "bali", "dubai", "seychelles", "mauritius"].forEach(id => {
-  const d = DESTINATIONS.find(x => x.id === id);
-  const el = document.createElement("article");
-  el.className = "pop-card";
-  el.innerHTML = `<img src="${d.img.replace("w=1000", "w=700")}" alt="${d.name}" loading="lazy">
-    <div class="pop-body"><h3>${d.name}</h3><p>${d.card}</p>
-    <div class="pop-foot"><span class="price-note">Price on enquiry</span><span>${d.id === "maldives" ? '<button class="btn-plan-sm" type="button">Plan →</button> ' : ''}<button class="btn-enquire" type="button">Enquire →</button></span></div></div>`;
-  el.querySelector("img").addEventListener("click", () => openDest(d.id));
-  const planBtn = el.querySelector(".btn-plan-sm");
-  if (planBtn) planBtn.addEventListener("click", () => openPlan(d.id));
-  el.querySelector(".btn-enquire").addEventListener("click", () => {
-    document.getElementById("fDest").value = d.name;
-    document.getElementById("enquire").scrollIntoView({ behavior: "smooth" });
-  });
-  popRow.appendChild(el);
-});
 
 // --- Recent Gallery (destination photos; tap to open the journey) ---
 withImg.slice(0, 8).forEach((d, i) => {
