@@ -128,3 +128,17 @@
   .print-area,.print-area *{visibility:visible}
   .print-area{position:absolute;top:0;left:0;right:0;box-shadow:none;border:0}
 }
+
+/* Small-phone hardening (<=520px): single columns, stacked pairs, tighter docs */
+@media(max-width:520px){
+  .tool-grid{grid-template-columns:1fr}
+  .editor-grid{grid-template-columns:1fr}
+  .admin-stats{gap:.7rem}
+  .stat-chip{flex:1 1 128px;min-width:0}
+  .form-2col{grid-template-columns:1fr}
+  .doc-preview{padding:1.4rem 1.15rem}
+  .dash-hero{padding:1.4rem 1.15rem}
+  .tool-form{padding:1.15rem}
+  .admin-top h2{font-size:1.28rem}
+  .admin-user{display:none}
+}
