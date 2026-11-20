@@ -521,7 +521,11 @@ document.querySelectorAll(".drop-btn").forEach(btn => {
   });
 });
 document.addEventListener("click", e => {
-  if (!e.target.closest(".has-drop")) closeNavAndDrops();
+  // "Outside" means outside the dropdowns AND outside the mobile nav
+  // system: the hamburger tap and taps inside the open panel must not be
+  // eaten by this handler (Batch #5 regression — it closed the menu the
+  // same tap had just opened).
+  if (!e.target.closest(".has-drop") && !e.target.closest("#navToggle") && !e.target.closest(".main-nav")) closeNavAndDrops();
 });
 // Desktop hover intent: the mega-panel is centred on the page while its
 // button sits left of centre, so a diagonal pointer move toward the far
